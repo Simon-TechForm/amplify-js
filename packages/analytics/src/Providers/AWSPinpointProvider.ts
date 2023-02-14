@@ -386,7 +386,6 @@ export class AWSPinpointProvider implements AnalyticsProvider {
 		const { appId, endpointId } = config;
 
 		const request = this._endpointRequest(
-			config,
 			transferKeyToLowerCase(
 				event,
 				[],
@@ -622,67 +621,23 @@ export class AWSPinpointProvider implements AnalyticsProvider {
 	 * EndPoint request
 	 * @return {Object} - The request of updating endpoint
 	 */
-	private _endpointRequest(config, event) {
-		const { credentials } = config;
+	private _endpointRequest(event) {
 		const clientInfo = this._clientInfo || {};
-		const clientContext = config.clientContext || {};
-		// for now we have three different ways for default endpoint configurations
-		// clientInfo
-		// clientContext (deprecated)
-		// config.endpoint
-		const defaultEndpointConfig = config.endpoint || {};
-		const demographicByClientInfo = {
-			appVersion: clientInfo.appVersion,
-			make: clientInfo.make,
-			model: clientInfo.model,
-			modelVersion: clientInfo.version,
-			platform: clientInfo.platform,
-		};
-		// for backward compatibility
-		const {
-			clientId,
-			appTitle,
-			appVersionName,
-			appVersionCode,
-			appPackageName,
-			...demographicByClientContext
-		} = clientContext;
+		// @ts-ignore
+		const apnsChannelType = __DEV__ ? 'APNS_SANDBOX' : 'APNS';
 		const channelType = event.address
 			? clientInfo.platform === 'android'
 				? 'GCM'
-				: 'APNS'
+				: apnsChannelType
 			: undefined;
 		const tmp = {
 			channelType,
 			requestId: uuid(),
 			effectiveDate: new Date().toISOString(),
-			...defaultEndpointConfig,
 			...event,
-			attributes: {
-				...defaultEndpointConfig.attributes,
-				...event.attributes,
-			},
-			demographic: {
-				...demographicByClientInfo,
-				...demographicByClientContext,
-				...defaultEndpointConfig.demographic,
-				...event.demographic,
-			},
-			location: {
-				...defaultEndpointConfig.location,
-				...event.location,
-			},
-			metrics: {
-				...defaultEndpointConfig.metrics,
-				...event.metrics,
-			},
 			user: {
-				userId:
-					event.userId ||
-					defaultEndpointConfig.userId ||
-					credentials.identityId,
+				userId: event.userId,
 				userAttributes: {
-					...defaultEndpointConfig.userAttributes,
 					...event.userAttributes,
 				},
 			},
