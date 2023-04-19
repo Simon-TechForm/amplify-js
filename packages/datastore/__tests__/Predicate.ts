@@ -24,7 +24,7 @@ import {
 	predicateToGraphQLCondition,
 	predicateToGraphQLFilter,
 } from '../src/sync/utils';
-import { schema, Author, Post, Blog, BlogOwner } from './model';
+import { schema, Author, Post, Blog, BlogOwner, Person } from './model';
 import { AsyncCollection } from '../src';
 
 const AuthorMeta = {
@@ -45,6 +45,12 @@ const PostMeta = {
 	pkField: ['id'],
 };
 
+const PersonMeta = {
+	builder: Person,
+	schema: schema.models['Person'],
+	pkField: ['id'],
+};
+
 const metas = {
 	Author: AuthorMeta,
 	Blog: BlogMeta,
@@ -54,6 +60,7 @@ const metas = {
 		schema: schema.models['BlogOwner'],
 		pkField: ['id'],
 	},
+	Person: PersonMeta,
 };
 
 type ModelOf<T> = T extends PersistentModelConstructor<infer M> ? M : T;
@@ -1730,6 +1737,239 @@ describe('Predicates', () => {
 		});
 	});
 
+	describe('handling of null and undefined', () => {
+		const getFixture = () => {
+			return ['null 01', 'defined 01', 'null 02', 'defined 02', 'null 03'].map(
+				name => {
+					return new Person({
+						firstName: `${name} first name`,
+						lastName: `${name} last name`,
+						username: name.includes('null') ? null : name,
+						age: name.includes('null') ? null : parseInt(name.split(' ')[1]),
+					});
+				}
+			);
+		};
+
+		[
+			{
+				name: 'filters',
+				execute: async <T>(query: any) =>
+					asyncFilter(getFixture(), i => internals(query).matches(i)),
+			},
+			{
+				name: 'storage predicates',
+				execute: async <T>(query: any) => {
+					return (await internals(query).fetch(
+						getStorageFake({
+							[Person.name]: getFixture(),
+						}) as any
+					)) as T[];
+				},
+			},
+		].forEach(mechanism => {
+			describe(`as ${mechanism.name}`, () => {
+				test('can select non-null values by their defined values', async () => {
+					const query =
+						recursivePredicateFor(PersonMeta).username.eq('defined 01');
+					const matches = await mechanism.execute<ModelOf<typeof Person>>(
+						query
+					);
+
+					expect(matches.length).toBe(1);
+					expect(matches.map(n => n.username)).toEqual(['defined 01']);
+				});
+
+				test('can select non-null values by searching for != null', async () => {
+					const query = recursivePredicateFor(PersonMeta).username.ne(
+						null as any
+					);
+					const matches = await mechanism.execute<ModelOf<typeof Person>>(
+						query
+					);
+
+					expect(matches.length).toBe(2);
+					expect(matches.map(n => n.username)).toEqual([
+						'defined 01',
+						'defined 02',
+					]);
+				});
+
+				test('can select non-null values by searching for != undefined', async () => {
+					const query =
+						recursivePredicateFor(PersonMeta).username.ne(undefined);
+					const matches = await mechanism.execute<ModelOf<typeof Person>>(
+						query
+					);
+
+					expect(matches.length).toBe(2);
+					expect(matches.map(n => n.username)).toEqual([
+						'defined 01',
+						'defined 02',
+					]);
+				});
+
+				test('can select null values by searching for == null', async () => {
+					const query = recursivePredicateFor(PersonMeta).username.eq(
+						null as any
+					);
+					const matches = await mechanism.execute<ModelOf<typeof Person>>(
+						query
+					);
+
+					expect(matches.length).toBe(3);
+					expect(matches.map(n => n.username)).toEqual([null, null, null]);
+				});
+
+				test('can select null values by searching for == undefined', async () => {
+					const query =
+						recursivePredicateFor(PersonMeta).username.eq(undefined);
+					const matches = await mechanism.execute<ModelOf<typeof Person>>(
+						query
+					);
+
+					expect(matches.length).toBe(3);
+					expect(matches.map(n => n.username)).toEqual([null, null, null]);
+				});
+
+				describe('can query on null fields without error', () => {
+					test('eq', async () => {
+						expect.assertions(2);
+						const query =
+							recursivePredicateFor(PersonMeta).username.eq('defined 01');
+						const matches = await mechanism.execute<ModelOf<typeof Person>>(
+							query
+						);
+						expect(matches.length).toBe(1);
+						expect(matches.map(n => n.username)).toEqual(['defined 01']);
+					});
+
+					test('ne', async () => {
+						expect.assertions(2);
+						const query =
+							recursivePredicateFor(PersonMeta).username.ne('defined 01');
+						const matches = await mechanism.execute<ModelOf<typeof Person>>(
+							query
+						);
+						expect(matches.length).toBe(4);
+						expect(matches.map(n => n.username)).toEqual([
+							null,
+							null,
+							'defined 02',
+							null,
+						]);
+					});
+
+					test('gt', async () => {
+						expect.assertions(2);
+						const query = recursivePredicateFor(PersonMeta).age.gt(1);
+						const matches = await mechanism.execute<ModelOf<typeof Person>>(
+							query
+						);
+						expect(matches.length).toBe(1);
+						expect(matches.map(n => n.username)).toEqual(['defined 02']);
+					});
+
+					test('ge', async () => {
+						expect.assertions(2);
+						const query = recursivePredicateFor(PersonMeta).age.ge(1);
+						const matches = await mechanism.execute<ModelOf<typeof Person>>(
+							query
+						);
+						expect(matches.length).toBe(2);
+						expect(matches.map(n => n.username)).toEqual([
+							'defined 01',
+							'defined 02',
+						]);
+					});
+
+					test('lt', async () => {
+						expect.assertions(2);
+						const query = recursivePredicateFor(PersonMeta).age.lt(2);
+						const matches = await mechanism.execute<ModelOf<typeof Person>>(
+							query
+						);
+						expect(matches.length).toBe(4);
+						expect(matches.map(n => n.username)).toEqual([
+							null,
+							'defined 01',
+							null,
+							null,
+						]);
+					});
+
+					test('le', async () => {
+						expect.assertions(2);
+						const query = recursivePredicateFor(PersonMeta).age.le(2);
+						const matches = await mechanism.execute<ModelOf<typeof Person>>(
+							query
+						);
+						expect(matches.length).toBe(5);
+						expect(matches.map(n => n.username)).toEqual([
+							null,
+							'defined 01',
+							null,
+							'defined 02',
+							null,
+						]);
+					});
+
+					test('contains', async () => {
+						expect.assertions(2);
+						const query =
+							recursivePredicateFor(PersonMeta).username.contains('defined');
+						const matches = await mechanism.execute<ModelOf<typeof Person>>(
+							query
+						);
+						expect(matches.length).toBe(2);
+						expect(matches.map(n => n.username)).toEqual([
+							'defined 01',
+							'defined 02',
+						]);
+					});
+
+					test('notContains', async () => {
+						expect.assertions(2);
+						const query =
+							recursivePredicateFor(PersonMeta).username.notContains('defined');
+						const matches = await mechanism.execute<ModelOf<typeof Person>>(
+							query
+						);
+						expect(matches.length).toBe(3);
+						expect(matches.map(n => n.username)).toEqual([null, null, null]);
+					});
+
+					test('beginsWith', async () => {
+						expect.assertions(2);
+						const query =
+							recursivePredicateFor(PersonMeta).username.beginsWith('defined');
+						const matches = await mechanism.execute<ModelOf<typeof Person>>(
+							query
+						);
+						expect(matches.length).toBe(2);
+						expect(matches.map(n => n.username)).toEqual([
+							'defined 01',
+							'defined 02',
+						]);
+					});
+
+					test('between', async () => {
+						expect.assertions(2);
+						const query = recursivePredicateFor(PersonMeta).age.between(1, 2);
+						const matches = await mechanism.execute<ModelOf<typeof Person>>(
+							query
+						);
+						expect(matches.length).toBe(2);
+						expect(matches.map(n => n.username)).toEqual([
+							'defined 01',
+							'defined 02',
+						]);
+					});
+				});
+			});
+		});
+	});
+
 	describe('on related/nested properties', () => {
 		const blogOwnerNames = [
 			'Adam West',
@@ -2170,6 +2410,12 @@ describe('Predicates', () => {
 	describe('non-recursive predicate to storage predicate generation', () => {
 		const ASTTransalationTestCases = [
 			{
+				gql: {},
+				expectedRegeneration: {},
+				matches: [{ name: 'abc' }],
+				mismatches: [],
+			},
+			{
 				gql: { and: [] },
 				expectedRegeneration: {},
 				matches: [{ name: 'abc' }],
@@ -2276,6 +2522,11 @@ describe('Predicates', () => {
 		}
 		const predicateTestCases = [
 			{
+				predicate: p => p,
+				matches: [{ name: 'abc' }],
+				mismatches: [],
+			},
+			{
 				predicate: p => p.name.eq('abc'),
 				matches: [{ name: 'abc' }],
 				mismatches: [{ name: 'abc_' }, { name: '_abc' }],
@@ -2294,6 +2545,30 @@ describe('Predicates', () => {
 				predicate: p => p.rating.eq(123),
 				matches: [{ rating: 123 }],
 				mismatches: [{ rating: 122 }, { rating: 124 }],
+			},
+
+			// `undefined` in predicates should be treated as `null` for matching purposes.
+			// neither cloud storage nor any correctly implemented adapters respond with
+			// `undefined` values in model instance fields.
+			{
+				predicate: p => p.name.eq(null),
+				matches: [{ name: null }],
+				mismatches: [{ name: '' }, { name: 'abc' }],
+			},
+			{
+				predicate: p => p.name.ne(null),
+				matches: [{ name: '' }, { name: 'abc' }],
+				mismatches: [{ name: null }],
+			},
+			{
+				predicate: p => p.name.eq(undefined),
+				matches: [{ name: null }],
+				mismatches: [{ name: '' }, { name: 'abc' }],
+			},
+			{
+				predicate: p => p.name.ne(undefined),
+				matches: [{ name: '' }, { name: 'abc' }],
+				mismatches: [{ name: null }],
 			},
 		];
 		for (const [i, testCase] of predicateTestCases.entries()) {
