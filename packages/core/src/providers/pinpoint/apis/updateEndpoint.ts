@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { amplifyUuid } from '../../../utils/amplifyUuid';
-import { getClientInfo } from '../../../utils/getClientInfo';
 import {
 	updateEndpoint as clientUpdateEndpoint,
 	UpdateEndpointInput,
@@ -40,15 +39,6 @@ export const updateEndpoint = async ({
 		name,
 		plan,
 	} = userProfile ?? {};
-	const clientInfo = getClientInfo();
-	const mergedDemographic = {
-		appVersion: clientInfo.appVersion,
-		make: clientInfo.make,
-		model: clientInfo.model,
-		modelVersion: clientInfo.version,
-		platform: clientInfo.platform,
-		...demographic,
-	};
 	const shouldAddAttributes = email || customProperties || name || plan;
 	const attributes = {
 		...(email && { email: [email] }),
@@ -66,14 +56,14 @@ export const updateEndpoint = async ({
 			Address: address,
 			Attributes: shouldAddAttributes ? attributes : undefined,
 			Demographic: {
-				AppVersion: mergedDemographic.appVersion,
-				Locale: mergedDemographic.locale,
-				Make: mergedDemographic.make,
-				Model: mergedDemographic.model,
-				ModelVersion: mergedDemographic.modelVersion,
-				Platform: mergedDemographic.platform,
-				PlatformVersion: mergedDemographic.platformVersion,
-				Timezone: mergedDemographic.timezone,
+				AppVersion: demographic?.appVersion,
+				Locale: demographic?.locale,
+				Make: demographic?.make,
+				Model: demographic?.model,
+				ModelVersion: demographic?.modelVersion,
+				Platform: demographic?.platform,
+				PlatformVersion: demographic?.platformVersion,
+				Timezone: demographic?.timezone,
 			},
 			Location: {
 				City: location?.city,
