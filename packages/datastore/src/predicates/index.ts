@@ -1,3 +1,5 @@
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
 import {
 	ModelPredicate,
 	PersistentModel,
@@ -214,7 +216,9 @@ export class ModelPredicateCreator {
 	 */
 	static transformGraphQLFilterNodeToPredicateAST(gql: any) {
 		if (!isValid(gql)) {
-			throw new Error('Invalid GraphQL Condition or subtree: ' + gql);
+			throw new Error(
+				'Invalid GraphQL Condition or subtree: ' + JSON.stringify(gql)
+			);
 		}
 
 		if (isEmpty(gql)) {

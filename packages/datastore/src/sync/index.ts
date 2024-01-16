@@ -1,15 +1,9 @@
-import {
-	browserOrNode,
-	ConsoleLogger as Logger,
-	BackgroundProcessManager,
-	Hub,
-} from '@aws-amplify/core';
-import {
-	CONTROL_MSG as PUBSUB_CONTROL_MSG,
-	CONNECTION_STATE_CHANGE as PUBSUB_CONNECTION_STATE_CHANGE,
-	ConnectionState,
-} from '@aws-amplify/pubsub';
-import Observable, { ZenObservable } from 'zen-observable-ts';
+// Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+// SPDX-License-Identifier: Apache-2.0
+import { BackgroundProcessManager } from '@aws-amplify/core/internals/utils';
+import { Hub, ConsoleLogger } from '@aws-amplify/core';
+
+import { filter, Observable, of, SubscriptionLike } from 'rxjs';
 import { ModelInstanceCreator } from '../datastore/datastore';
 import { ModelPredicateCreator } from '../predicates';
 import { ExclusiveStorage as Storage } from '../storage/storage';
@@ -51,8 +45,13 @@ import {
 	TransformerMutationType,
 } from './utils';
 
-const { isNode } = browserOrNode();
-const logger = new Logger('DataStore');
+import {
+	CONTROL_MSG as PUBSUB_CONTROL_MSG,
+	ConnectionState,
+	CONNECTION_STATE_CHANGE as PUBSUB_CONNECTION_STATE_CHANGE,
+} from '@aws-amplify/api-graphql';
+
+const logger = new ConsoleLogger('DataStore');
 
 const ownSymbol = Symbol('sync');
 
@@ -213,7 +212,7 @@ export class SyncEngine {
 		return new Observable<ControlMessageType<ControlMessage>>(observer => {
 			logger.log('starting sync engine...');
 
-			let subscriptions: ZenObservable.Subscription[] = [];
+			let subscriptions: SubscriptionLike[] = [];
 
 			this.runningProcesses.add(async () => {
 				try {
@@ -225,33 +224,28 @@ export class SyncEngine {
 
 				// this is awaited at the bottom. so, we don't need to register
 				// this explicitly with the context. it's already contained.
-				const startPromise = new Promise((doneStarting, failedStarting) => {
-					this.datastoreConnectivity.status().subscribe(
-						async ({ online }) =>
-							this.runningProcesses.isOpen &&
-							this.runningProcesses.add(async onTerminate => {
-								// From offline to online
-								if (online && !this.online) {
-									this.online = online;
+				const startPromise = new Promise<void>(
+					(doneStarting, failedStarting) => {
+						this.datastoreConnectivity.status().subscribe(
+							async ({ online }) =>
+								this.runningProcesses.isOpen &&
+								this.runningProcesses.add(async onTerminate => {
+									// From offline to online
+									if (online && !this.online) {
+										this.online = online;
 
-									observer.next({
-										type: ControlMessage.SYNC_ENGINE_NETWORK_STATUS,
-										data: {
-											active: this.online,
-										},
-									});
+										observer.next({
+											type: ControlMessage.SYNC_ENGINE_NETWORK_STATUS,
+											data: {
+												active: this.online,
+											},
+										});
 
-									let ctlSubsObservable: Observable<CONTROL_MSG>;
-									let dataSubsObservable: Observable<
-										[TransformerMutationType, SchemaModel, PersistentModel]
-									>;
+										let ctlSubsObservable: Observable<CONTROL_MSG>;
+										let dataSubsObservable: Observable<
+											[TransformerMutationType, SchemaModel, PersistentModel]
+										>;
 
-									// NOTE: need a way to override this conditional for testing.
-									if (isNode) {
-										logger.warn(
-											'Realtime disabled when in a server-side environment'
-										);
-									} else {
 										this.stopDisruptionListener =
 											this.startDisruptionListener();
 										//#region GraphQL Subscriptions
@@ -259,7 +253,7 @@ export class SyncEngine {
 											this.subscriptionsProcessor.start();
 
 										try {
-											await new Promise((resolve, reject) => {
+											await new Promise<void>((resolve, reject) => {
 												onTerminate.then(reject);
 												const ctlSubsSubscription = ctlSubsObservable.subscribe(
 													{
@@ -292,89 +286,87 @@ export class SyncEngine {
 										});
 
 										//#endregion
-									}
 
-									//#region Base & Sync queries
-									try {
-										await new Promise((resolve, reject) => {
-											const syncQuerySubscription =
-												this.syncQueriesObservable().subscribe({
-													next: message => {
-														const { type } = message;
+										//#region Base & Sync queries
+										try {
+											await new Promise<void>((resolve, reject) => {
+												const syncQuerySubscription =
+													this.syncQueriesObservable().subscribe({
+														next: message => {
+															const { type } = message;
 
-														if (
-															type ===
-															ControlMessage.SYNC_ENGINE_SYNC_QUERIES_READY
-														) {
+															if (
+																type ===
+																ControlMessage.SYNC_ENGINE_SYNC_QUERIES_READY
+															) {
+																resolve();
+															}
+
+															observer.next(message);
+														},
+														complete: () => {
 															resolve();
-														}
-
-														observer.next(message);
-													},
-													complete: () => {
-														resolve();
-													},
-													error: error => {
-														reject(error);
-													},
-												});
-
-											if (syncQuerySubscription) {
-												subscriptions.push(syncQuerySubscription);
-											}
-										});
-									} catch (error) {
-										observer.error(error);
-										failedStarting();
-										return;
-									}
-									//#endregion
-
-									//#region process mutations (outbox)
-									subscriptions.push(
-										this.mutationsProcessor
-											.start()
-											.subscribe(({ modelDefinition, model: item, hasMore }) =>
-												this.runningProcesses.add(async () => {
-													const modelConstructor = this.userModelClasses[
-														modelDefinition.name
-													] as PersistentModelConstructor<any>;
-
-													const model = this.modelInstanceCreator(
-														modelConstructor,
-														item
-													);
-
-													await this.storage.runExclusive(storage =>
-														this.modelMerger.merge(
-															storage,
-															model,
-															modelDefinition
-														)
-													);
-
-													observer.next({
-														type: ControlMessage.SYNC_ENGINE_OUTBOX_MUTATION_PROCESSED,
-														data: {
-															model: modelConstructor,
-															element: model,
+														},
+														error: error => {
+															reject(error);
 														},
 													});
 
-													observer.next({
-														type: ControlMessage.SYNC_ENGINE_OUTBOX_STATUS,
-														data: {
-															isEmpty: !hasMore,
-														},
-													});
-												}, 'mutation processor event')
-											)
-									);
-									//#endregion
+												if (syncQuerySubscription) {
+													subscriptions.push(syncQuerySubscription);
+												}
+											});
+										} catch (error) {
+											observer.error(error);
+											failedStarting();
+											return;
+										}
+										//#endregion
 
-									//#region Merge subscriptions buffer
-									// TODO: extract to function
-									if (!isNode) {
+										//#region process mutations (outbox)
+										subscriptions.push(
+											this.mutationsProcessor
+												.start()
+												.subscribe(
+													({ modelDefinition, model: item, hasMore }) =>
+														this.runningProcesses.add(async () => {
+															const modelConstructor = this.userModelClasses[
+																modelDefinition.name
+															] as PersistentModelConstructor<any>;
+
+															const model = this.modelInstanceCreator(
+																modelConstructor,
+																item
+															);
+
+															await this.storage.runExclusive(storage =>
+																this.modelMerger.merge(
+																	storage,
+																	model,
+																	modelDefinition
+																)
+															);
+
+															observer.next({
+																type: ControlMessage.SYNC_ENGINE_OUTBOX_MUTATION_PROCESSED,
+																data: {
+																	model: modelConstructor,
+																	element: model,
+																},
+															});
+
+															observer.next({
+																type: ControlMessage.SYNC_ENGINE_OUTBOX_STATUS,
+																data: {
+																	isEmpty: !hasMore,
+																},
+															});
+														}, 'mutation processor event')
+												)
+										);
+										//#endregion
+
+										//#region Merge subscriptions buffer
 										subscriptions.push(
 											dataSubsObservable!.subscribe(
 												([_transformerMutationType, modelDefinition, item]) =>
@@ -398,33 +390,35 @@ export class SyncEngine {
 													}, 'subscription dataSubsObservable event')
 											)
 										);
+										//#endregion
+									} else if (!online) {
+										this.online = online;
+
+										observer.next({
+											type: ControlMessage.SYNC_ENGINE_NETWORK_STATUS,
+											data: {
+												active: this.online,
+											},
+										});
+
+										subscriptions.forEach(sub => sub.unsubscribe());
+										subscriptions = [];
 									}
-									//#endregion
-								} else if (!online) {
-									this.online = online;
 
-									observer.next({
-										type: ControlMessage.SYNC_ENGINE_NETWORK_STATUS,
-										data: {
-											active: this.online,
-										},
-									});
-
-									subscriptions.forEach(sub => sub.unsubscribe());
-									subscriptions = [];
-								}
-
-								doneStarting();
-							}, 'datastore connectivity event')
-					);
-				});
+									doneStarting();
+								}, 'datastore connectivity event')
+						);
+					}
+				);
 
 				this.storage
 					.observe(null, null, ownSymbol)
-					.filter(({ model }) => {
-						const modelDefinition = this.getModelDefinition(model);
-						return modelDefinition.syncable === true;
-					})
+					.pipe(
+						filter(({ model }) => {
+							const modelDefinition = this.getModelDefinition(model);
+							return modelDefinition.syncable === true;
+						})
+					)
 					.subscribe({
 						next: async ({ opType, model, element, condition }) =>
 							this.runningProcesses.add(async () => {
@@ -536,11 +530,11 @@ export class SyncEngine {
 		ControlMessageType<ControlMessage>
 	> {
 		if (!this.online) {
-			return Observable.of<ControlMessageType<ControlMessage>>();
+			return of<ControlMessageType<ControlMessage>>({} as any); // TODO(v6): fix this
 		}
 
 		return new Observable<ControlMessageType<ControlMessage>>(observer => {
-			let syncQueriesSubscription: ZenObservable.Subscription;
+			let syncQueriesSubscription: SubscriptionLike;
 
 			this.runningProcesses.isOpen &&
 				this.runningProcesses.add(async onTerminate => {
@@ -567,7 +561,7 @@ export class SyncEngine {
 						let start: number;
 						let syncDuration: number;
 						let lastStartedAt: number;
-						await new Promise((resolve, reject) => {
+						await new Promise<void>((resolve, reject) => {
 							if (!this.runningProcesses.isOpen) resolve();
 							onTerminate.then(() => resolve());
 							syncQueriesSubscription = this.syncQueriesProcessor
@@ -604,9 +598,8 @@ export class SyncEngine {
 										 * merged individually. Otherwise, we can merge them in batches.
 										 */
 										await this.storage.runExclusive(async storage => {
-											const idsInOutbox = await this.outbox.getModelIds(
-												storage
-											);
+											const idsInOutbox =
+												await this.outbox.getModelIds(storage);
 
 											const oneByOne: ModelInstanceMetadata[] = [];
 											const page = items.filter(item => {
@@ -1122,10 +1115,15 @@ export class SyncEngine {
 	 * Schedule a sync to start when syncQueriesObservable enters sleep state
 	 * Start sync immediately if syncQueriesObservable is already in sleep state
 	 */
-	private scheduleSync(): Promise<void> {
-		return this.waitForSleepState.then(() => {
-			// unsleepSyncQueriesObservable will be set if waitForSleepState has resolved
-			this.unsleepSyncQueriesObservable!();
-		});
+	private scheduleSync() {
+		return (
+			this.runningProcesses.isOpen &&
+			this.runningProcesses.add(() =>
+				this.waitForSleepState.then(() => {
+					// unsleepSyncQueriesObservable will be set if waitForSleepState has resolved
+					this.unsleepSyncQueriesObservable!();
+				})
+			)
+		);
 	}
 }
