@@ -5,8 +5,8 @@ import {
 	GraphQLAuthMode,
 	ModelIntrospectionSchema,
 	ModelFieldType,
+	NonModelFieldType,
 	SchemaModel,
-	SchemaModels,
 	AssociationHasOne,
 	AssociationBelongsTo,
 } from '@aws-amplify/core/internals/utils';
@@ -16,7 +16,6 @@ import {
 	ListArgs,
 	QueryArgs,
 	V6Client,
-	V6ClientSSRCookies,
 	V6ClientSSRRequest,
 	__authMode,
 	__authToken,
@@ -24,6 +23,8 @@ import {
 } from '../types';
 import { AmplifyServer } from '@aws-amplify/core/internals/adapter-core';
 import { CustomHeaders } from '@aws-amplify/data-schema-types';
+import { SchemaNonModel } from '@aws-amplify/core/dist/esm/singleton/API/types';
+import type { IndexMeta } from './operations/indexQuery';
 
 type LazyLoadOptions = {
 	authMode?: GraphQLAuthMode;
@@ -51,7 +52,7 @@ export const flattenItems = (obj: Record<string, any>): Record<string, any> => {
 		if (typeof value === 'object' && !Array.isArray(value) && value !== null) {
 			if (value.items !== undefined) {
 				res[prop] = value.items.map((item: Record<string, any>) =>
-					flattenItems(item)
+					flattenItems(item),
 				);
 				return;
 			}
@@ -73,7 +74,7 @@ export function initializeModel(
 	modelIntrospection: ModelIntrospectionSchema,
 	authMode: GraphQLAuthMode | undefined,
 	authToken: string | undefined,
-	context = false
+	context = false,
 ): any[] {
 	const introModel = modelIntrospection.models[modelName];
 	const introModelFields = introModel.fields;
@@ -122,13 +123,13 @@ export function initializeModel(
 								return (acc[curVal] = record[curVal]);
 							}
 						},
-						{}
+						{},
 					);
 
 					if (context) {
 						initializedRelationalFields[fieldName] = (
 							contextSpec: AmplifyServer.ContextSpec,
-							options?: LazyLoadOptions
+							options?: LazyLoadOptions,
 						) => {
 							if (record[targetNames[0]]) {
 								return (
@@ -142,14 +143,14 @@ export function initializeModel(
 									{
 										authMode: options?.authMode || authMode,
 										authToken: options?.authToken || authToken,
-									}
+									},
 								);
 							}
 							return undefined;
 						};
 					} else {
 						initializedRelationalFields[fieldName] = (
-							options?: LazyLoadOptions
+							options?: LazyLoadOptions,
 						) => {
 							if (record[targetNames[0]]) {
 								return (client as V6Client<Record<string, any>>).models[
@@ -162,7 +163,7 @@ export function initializeModel(
 									{
 										authMode: options?.authMode || authMode,
 										authToken: options?.authToken || authToken,
-									}
+									},
 								);
 							}
 							return undefined;
@@ -194,13 +195,13 @@ export function initializeModel(
 								}
 
 								return { [field]: { eq: record[parentSK[idx - 1]] } };
-							}
+							},
 						);
 
 						if (context) {
 							initializedRelationalFields[fieldName] = (
 								contextSpec: AmplifyServer.ContextSpec,
-								options?: LazyLoadOptions
+								options?: LazyLoadOptions,
 							) => {
 								if (record[parentPk]) {
 									return (
@@ -217,7 +218,7 @@ export function initializeModel(
 							};
 						} else {
 							initializedRelationalFields[fieldName] = (
-								options?: LazyLoadOptions
+								options?: LazyLoadOptions,
 							) => {
 								if (record[parentPk]) {
 									return (client as V6Client<Record<string, any>>).models[
@@ -244,13 +245,13 @@ export function initializeModel(
 							}
 
 							return { [field]: { eq: record[parentSK[idx - 1]] } };
-						}
+						},
 					);
 
 					if (context) {
 						initializedRelationalFields[fieldName] = (
 							contextSpec: AmplifyServer.ContextSpec,
-							options?: LazyLoadOptions
+							options?: LazyLoadOptions,
 						) => {
 							if (record[parentPk]) {
 								return (
@@ -267,7 +268,7 @@ export function initializeModel(
 						};
 					} else {
 						initializedRelationalFields[fieldName] = (
-							options?: LazyLoadOptions
+							options?: LazyLoadOptions,
 						) => {
 							if (record[parentPk]) {
 								return (client as V6Client<Record<string, any>>).models[
@@ -295,23 +296,58 @@ export function initializeModel(
 }
 
 export const graphQLOperationsInfo = {
-	CREATE: { operationPrefix: 'create' as const, usePlural: false },
-	READ: { operationPrefix: 'get' as const, usePlural: false },
-	UPDATE: { operationPrefix: 'update' as const, usePlural: false },
-	DELETE: { operationPrefix: 'delete' as const, usePlural: false },
-	LIST: { operationPrefix: 'list' as const, usePlural: true },
-	ONCREATE: { operationPrefix: 'onCreate' as const, usePlural: false },
-	ONUPDATE: { operationPrefix: 'onUpdate' as const, usePlural: false },
-	ONDELETE: { operationPrefix: 'onDelete' as const, usePlural: false },
-	OBSERVE_QUERY: { operationPrefix: 'observeQuery' as const, usePlural: false },
-};
+	CREATE: { operationPrefix: 'create', usePlural: false },
+	READ: { operationPrefix: 'get', usePlural: false },
+	UPDATE: { operationPrefix: 'update', usePlural: false },
+	DELETE: { operationPrefix: 'delete', usePlural: false },
+	LIST: { operationPrefix: 'list', usePlural: true },
+	INDEX_QUERY: { operationPrefix: '', usePlural: false },
+	ONCREATE: { operationPrefix: 'onCreate', usePlural: false },
+	ONUPDATE: { operationPrefix: 'onUpdate', usePlural: false },
+	ONDELETE: { operationPrefix: 'onDelete', usePlural: false },
+	OBSERVE_QUERY: { operationPrefix: 'observeQuery', usePlural: false },
+} as const;
 export type ModelOperation = keyof typeof graphQLOperationsInfo;
 
 type OperationPrefix =
 	(typeof graphQLOperationsInfo)[ModelOperation]['operationPrefix'];
 
-const graphQLDocumentsCache = new Map<string, Map<ModelOperation, string>>();
 const SELECTION_SET_WILDCARD = '*';
+
+export function defaultSelectionSetForNonModelWithIR(
+	nonModelDefinition: SchemaNonModel,
+	modelIntrospection: ModelIntrospectionSchema,
+): Record<string, unknown> {
+	const { fields } = nonModelDefinition;
+	const mappedFields = Object.values(fields)
+		.map(({ type, name }) => {
+			if (typeof (type as { enum: string }).enum === 'string') {
+				return [name, FIELD_IR];
+			}
+
+			if (typeof (type as NonModelFieldType).nonModel === 'string') {
+				return [
+					name,
+					defaultSelectionSetForNonModelWithIR(
+						modelIntrospection.nonModels[(type as NonModelFieldType).nonModel],
+						modelIntrospection,
+					),
+				];
+			}
+
+			if (typeof type === 'string') {
+				return [name, FIELD_IR];
+			}
+
+			return undefined;
+		})
+		.filter(
+			(
+				pair: (string | Record<string, unknown>)[] | undefined,
+			): pair is (string | Record<string, unknown>)[] => pair !== undefined,
+		);
+	return Object.fromEntries(mappedFields);
+}
 
 function defaultSelectionSetForModel(modelDefinition: SchemaModel): string[] {
 	// fields that are explicitly part of the graphql schema; not
@@ -319,12 +355,17 @@ function defaultSelectionSetForModel(modelDefinition: SchemaModel): string[] {
 	const { fields } = modelDefinition;
 	const explicitFields = Object.values<any>(fields)
 		// Default selection set omits model fields
-		.map(
-			({ type, name }) =>
-				(typeof type === 'string' ||
-					(typeof type === 'object' && typeof type?.enum === 'string')) &&
-				name
-		)
+		.map(({ type, name }) => {
+			if (typeof type === 'string') return name;
+
+			if (typeof type === 'object') {
+				if (typeof type?.enum === 'string') {
+					return name;
+				} else if (typeof type?.nonModel === 'string') {
+					return `${name}.${SELECTION_SET_WILDCARD}`;
+				}
+			}
+		})
 		.filter(Boolean);
 
 	// fields used for owner auth rules that may or may not also
@@ -356,73 +397,131 @@ const FIELD_IR = '';
  * ```
  */
 export function customSelectionSetToIR(
-	modelDefinitions: SchemaModels,
+	modelIntrospection: ModelIntrospectionSchema,
 	modelName: string,
-	selectionSet: string[]
+	selectionSet: string[],
 ): Record<string, string | object> {
-	const dotNotationToObject = (
-		path: string,
-		modelName: string
-	): Record<string, any> => {
+	const dotNotationToObject = (path: string, modelOrNonModelName: string) => {
 		const [fieldName, ...rest] = path.split('.');
 
-		let result: Record<string, any> = {};
+		const nested = rest[0];
+		const modelOrNonModelDefinition =
+			modelIntrospection.models[modelOrNonModelName] ??
+			modelIntrospection.nonModels[modelOrNonModelName];
 
-		if (rest.length === 0) {
-			result = { [fieldName]: FIELD_IR };
-		} else {
-			const nested = rest[0];
-			const modelDefinition = modelDefinitions[modelName];
-			const modelFields = modelDefinition.fields;
-			const relatedModel = (modelFields[fieldName]?.type as ModelFieldType)?.model;
+		const modelOrNonModelFields = modelOrNonModelDefinition?.fields;
+		const relatedModel = (
+			modelOrNonModelFields?.[fieldName]?.type as ModelFieldType
+		)?.model;
 
-			if (!relatedModel) {
-				// TODO: may need to change this to support custom types
-				throw Error(`${fieldName} is not a model field`);
+		const relatedModelDefinition = modelIntrospection.models[relatedModel];
+		const relatedNonModel = (
+			modelOrNonModelFields?.[fieldName]?.type as NonModelFieldType
+		)?.nonModel;
+		const relatedNonModelDefinition =
+			modelIntrospection.nonModels[relatedNonModel];
+
+		const isModelOrNonModelOrFieldType = relatedModelDefinition
+			? 'model'
+			: relatedNonModelDefinition
+				? 'nonModel'
+				: 'field';
+
+		if (isModelOrNonModelOrFieldType === 'nonModel') {
+			let result: Record<string, any> = {};
+
+			if (!nested) {
+				throw Error(
+					`${fieldName} must declare a wildcard (*) or a field of custom type ${relatedNonModel}`,
+				);
 			}
 
 			if (nested === SELECTION_SET_WILDCARD) {
-				const relatedModelDefinition = modelDefinitions[relatedModel];
-
 				result = {
-					[fieldName]: defaultSelectionSetIR(relatedModelDefinition),
+					[fieldName]: defaultSelectionSetForNonModelWithIR(
+						relatedNonModelDefinition,
+						modelIntrospection,
+					),
 				};
 			} else {
-				const exists = Boolean(modelFields[fieldName]);
-				if (!exists) {
-					throw Error(`${fieldName} is not a field of model ${modelName}`);
-				}
+				result = {
+					[fieldName]: dotNotationToObject(rest.join('.'), relatedNonModel),
+				};
+			}
 
+			return result;
+		} else if (isModelOrNonModelOrFieldType === 'model') {
+			let result: Record<string, any> = {};
+
+			if (!nested) {
+				throw Error(
+					`${fieldName} must declare a wildcard (*) or a field of model ${relatedModel}`,
+				);
+			}
+
+			if (nested === SELECTION_SET_WILDCARD) {
+				const relatedModelDefinition = modelIntrospection.models[relatedModel];
+
+				result = {
+					[fieldName]: modelsDefaultSelectionSetIR(relatedModelDefinition),
+				};
+			} else {
 				result = {
 					[fieldName]: dotNotationToObject(rest.join('.'), relatedModel),
 				};
 			}
 
-			if (modelFields[fieldName]?.isArray) {
+			if (modelOrNonModelFields[fieldName]?.isArray) {
 				result = {
 					[fieldName]: {
 						items: result[fieldName],
 					},
 				};
 			}
-		}
 
-		return result;
+			return result;
+		} else {
+			const modelField = modelOrNonModelFields?.[fieldName];
+
+			const nonModelDefinition =
+				modelIntrospection.nonModels[modelOrNonModelName];
+			const nonModelField = nonModelDefinition?.fields?.[fieldName];
+
+			if (!nonModelDefinition) {
+				const isOwnerField = resolveOwnerFields(
+					modelOrNonModelDefinition,
+				).includes(fieldName);
+
+				if (!modelField && !isOwnerField) {
+					throw Error(
+						`${fieldName} is not a field of model ${modelOrNonModelName}`,
+					);
+				}
+			} else {
+				if (!nonModelField) {
+					throw Error(
+						`${fieldName} is not a field of custom type ${modelOrNonModelName}`,
+					);
+				}
+			}
+
+			return { [fieldName]: FIELD_IR };
+		}
 	};
 
 	return selectionSet.reduce(
 		(resultObj, path) =>
 			deepMergeSelectionSetObjects(
 				dotNotationToObject(path, modelName),
-				resultObj
+				resultObj,
 			),
-		{} as Record<string, any>
+		{} as Record<string, any>,
 	);
 }
 
-const defaultSelectionSetIR = (relatedModelDefinition: SchemaModel) => {
+const modelsDefaultSelectionSetIR = (relatedModelDefinition: SchemaModel) => {
 	const defaultSelectionSet = defaultSelectionSetForModel(
-		relatedModelDefinition
+		relatedModelDefinition,
 	);
 
 	const reduced = defaultSelectionSet.reduce(
@@ -430,7 +529,7 @@ const defaultSelectionSetIR = (relatedModelDefinition: SchemaModel) => {
 			acc[curVal] = FIELD_IR;
 			return acc;
 		},
-		{}
+		{},
 	);
 
 	return reduced;
@@ -452,7 +551,7 @@ const defaultSelectionSetIR = (relatedModelDefinition: SchemaModel) => {
  * `'id comments { items { post { id } } }'`
  */
 export function selectionSetIRToString(
-	obj: Record<string, string | any>
+	obj: Record<string, string | any>,
 ): string {
 	const res: string[] = [];
 
@@ -468,7 +567,7 @@ export function selectionSetIRToString(
 					'{',
 					selectionSetIRToString(value.items),
 					'}',
-					'}'
+					'}',
 				);
 			} else {
 				res.push(fieldName, '{', selectionSetIRToString(value), '}');
@@ -489,7 +588,7 @@ export function selectionSetIRToString(
  */
 function deepMergeSelectionSetObjects<T extends Record<string, any>>(
 	source: T,
-	target: T
+	target: T,
 ) {
 	const isObject = (obj: any) => obj && typeof obj === 'object';
 
@@ -508,20 +607,16 @@ function deepMergeSelectionSetObjects<T extends Record<string, any>>(
 }
 
 export function generateSelectionSet(
-	modelDefinitions: SchemaModels,
+	modelIntrospection: ModelIntrospectionSchema,
 	modelName: string,
-	selectionSet?: string[]
+	selectionSet?: string[],
 ) {
-	const modelDefinition = modelDefinitions[modelName];
-
-	if (!selectionSet) {
-		return defaultSelectionSetForModel(modelDefinition).join(' ');
-	}
+	const modelDefinition = modelIntrospection.models[modelName];
 
 	const selSetIr = customSelectionSetToIR(
-		modelDefinitions,
+		modelIntrospection,
 		modelName,
-		selectionSet
+		selectionSet ?? defaultSelectionSetForModel(modelDefinition),
 	);
 	const selSetString = selectionSetIRToString(selSetIr);
 
@@ -529,12 +624,13 @@ export function generateSelectionSet(
 }
 
 export function generateGraphQLDocument(
-	modelDefinitions: SchemaModels,
+	modelIntrospection: ModelIntrospectionSchema,
 	modelName: string,
 	modelOperation: ModelOperation,
-	listArgs?: ListArgs
+	listArgs?: ListArgs | QueryArgs,
+	indexMeta?: IndexMeta,
 ): string {
-	const modelDefinition = modelDefinitions[modelName];
+	const modelDefinition = modelIntrospection.models[modelName];
 
 	const {
 		name,
@@ -551,25 +647,39 @@ export function generateGraphQLDocument(
 
 	const { selectionSet } = listArgs || {};
 
-	const fromCache = graphQLDocumentsCache.get(name)?.get(modelOperation);
+	let graphQLFieldName;
+	let indexQueryArgs: Record<string, string>;
 
-	if (fromCache !== undefined) {
-		return fromCache;
+	if (operationPrefix) {
+		graphQLFieldName = `${operationPrefix}${usePlural ? pluralName : name}`;
+	} else if (indexMeta) {
+		const { queryField, pk, sk = [] } = indexMeta;
+		graphQLFieldName = queryField;
+
+		const skQueryArgs = sk.reduce((acc: Record<string, any>, fieldName) => {
+			const fieldType = fields[fieldName].type;
+			acc[fieldName] = `Model${fieldType}KeyConditionInput`;
+			return acc;
+		}, {});
+
+		indexQueryArgs = {
+			[pk]: `${fields[pk].type}!`,
+			...skQueryArgs,
+		};
+	} else {
+		throw new Error(
+			'Error generating GraphQL Document - invalid operation name',
+		);
 	}
 
-	if (!graphQLDocumentsCache.has(name)) {
-		graphQLDocumentsCache.set(name, new Map());
-	}
-
-	const graphQLFieldName = `${operationPrefix}${usePlural ? pluralName : name}`;
 	let graphQLOperationType: 'mutation' | 'query' | 'subscription' | undefined;
 	let graphQLSelectionSet: string | undefined;
 	let graphQLArguments: Record<string, any> | undefined;
 
 	const selectionSetFields = generateSelectionSet(
-		modelDefinitions,
+		modelIntrospection,
 		modelName,
-		selectionSet
+		selectionSet as ListArgs['selectionSet'],
 	);
 
 	switch (modelOperation) {
@@ -589,19 +699,30 @@ export function generateGraphQLDocument(
 				(graphQLArguments = isCustomPrimaryKey
 					? [primaryKeyFieldName, ...sortKeyFieldNames].reduce(
 							(acc: Record<string, any>, fieldName) => {
-								acc[fieldName] = fields[fieldName].type;
+								acc[fieldName] = `${fields[fieldName].type}!`;
 
 								return acc;
 							},
-							{}
-					  )
+							{},
+						)
 					: {
 							[primaryKeyFieldName]: `${fields[primaryKeyFieldName].type}!`,
-					  });
+						});
 			graphQLSelectionSet ?? (graphQLSelectionSet = selectionSetFields);
 		case 'LIST':
 			graphQLArguments ??
 				(graphQLArguments = {
+					filter: `Model${name}FilterInput`,
+					limit: 'Int',
+					nextToken: 'String',
+				});
+			graphQLOperationType ?? (graphQLOperationType = 'query');
+			graphQLSelectionSet ??
+				(graphQLSelectionSet = `items { ${selectionSetFields} } nextToken __typename`);
+		case 'INDEX_QUERY':
+			graphQLArguments ??
+				(graphQLArguments = {
+					...indexQueryArgs!,
 					filter: `Model${name}FilterInput`,
 					limit: 'Int',
 					nextToken: 'String',
@@ -622,25 +743,23 @@ export function generateGraphQLDocument(
 		case 'OBSERVE_QUERY':
 		default:
 			throw new Error(
-				'Internal error: Attempted to generate graphql document for observeQuery. Please report this error.'
+				'Internal error: Attempted to generate graphql document for observeQuery. Please report this error.',
 			);
 	}
 
 	const graphQLDocument = `${graphQLOperationType}${
 		graphQLArguments
 			? `(${Object.entries(graphQLArguments).map(
-					([fieldName, type]) => `\$${fieldName}: ${type}`
-			  )})`
+					([fieldName, type]) => `\$${fieldName}: ${type}`,
+				)})`
 			: ''
 	} { ${graphQLFieldName}${
 		graphQLArguments
 			? `(${Object.keys(graphQLArguments).map(
-					fieldName => `${fieldName}: \$${fieldName}`
-			  )})`
+					fieldName => `${fieldName}: \$${fieldName}`,
+				)})`
 			: ''
 	} { ${graphQLSelectionSet} } }`;
-
-	graphQLDocumentsCache.get(name)?.set(modelOperation, graphQLDocument);
 
 	return graphQLDocument;
 }
@@ -649,7 +768,8 @@ export function buildGraphQLVariables(
 	modelDefinition: SchemaModel,
 	operation: ModelOperation,
 	arg: QueryArgs | undefined,
-	modelIntrospection: ModelIntrospectionSchema
+	modelIntrospection: ModelIntrospectionSchema,
+	indexMeta?: IndexMeta,
 ): object {
 	const {
 		fields,
@@ -677,13 +797,17 @@ export function buildGraphQLVariables(
 				input: arg
 					? Object.fromEntries(
 							Object.entries(
-								normalizeMutationInput(arg, modelDefinition, modelIntrospection)
+								normalizeMutationInput(
+									arg,
+									modelDefinition,
+									modelIntrospection,
+								),
 							).filter(([fieldName]) => {
 								const { isReadOnly } = fields[fieldName];
 
 								return !isReadOnly;
-							})
-					  )
+							}),
+						)
 					: {},
 			};
 			break;
@@ -698,8 +822,8 @@ export function buildGraphQLVariables(
 
 								return acc;
 							},
-							{}
-					  )
+							{},
+						)
 					: { [primaryKeyFieldName]: arg[primaryKeyFieldName] };
 			}
 
@@ -708,6 +832,25 @@ export function buildGraphQLVariables(
 			}
 			break;
 		case 'LIST':
+			if (arg?.filter) {
+				variables.filter = arg.filter;
+			}
+			if (arg?.nextToken) {
+				variables.nextToken = arg.nextToken;
+			}
+			if (arg?.limit) {
+				variables.limit = arg.limit;
+			}
+			break;
+		case 'INDEX_QUERY':
+			const { pk, sk = [] } = indexMeta!;
+
+			variables[pk] = arg![pk];
+
+			for (const skField of sk) {
+				variables[skField] = arg![skField];
+			}
+
 			if (arg?.filter) {
 				variables.filter = arg.filter;
 			}
@@ -727,7 +870,7 @@ export function buildGraphQLVariables(
 			break;
 		case 'OBSERVE_QUERY':
 			throw new Error(
-				'Internal error: Attempted to build variables for observeQuery. Please report this error.'
+				'Internal error: Attempted to build variables for observeQuery. Please report this error.',
 			);
 			break;
 		default:
@@ -755,7 +898,7 @@ export function buildGraphQLVariables(
 export function normalizeMutationInput(
 	mutationInput: QueryArgs,
 	model: SchemaModel,
-	modelIntrospection: ModelIntrospectionSchema
+	modelIntrospection: ModelIntrospectionSchema,
 ): QueryArgs {
 	const { fields } = model;
 
@@ -811,12 +954,12 @@ export function normalizeMutationInput(
  * as a fallback.
  *
  * @param client Configured client from `generateClient`
- * @param options Args/Options obect from call site.
+ * @param options Args/Options object from call site.
  * @returns
  */
 export function authModeParams(
 	client: ClientWithModels,
-	options: AuthModeParams = {}
+	options: AuthModeParams = {},
 ): AuthModeParams {
 	return {
 		authMode: options.authMode || client[__authMode],
@@ -832,7 +975,7 @@ export function authModeParams(
  */
 export function getCustomHeaders(
 	client: V6Client | ClientWithModels,
-	requestHeaders?: CustomHeaders
+	requestHeaders?: CustomHeaders,
 ): CustomHeaders {
 	let headers: CustomHeaders = client[__headers] || {};
 
