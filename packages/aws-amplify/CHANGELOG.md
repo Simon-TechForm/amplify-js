@@ -3,6 +3,110 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [6.3.8](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.3.7...aws-amplify@6.3.8) (2024-06-24)
+
+**Note:** Version bump only for package aws-amplify
+
+## [6.3.7](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.3.6...aws-amplify@6.3.7) (2024-06-18)
+
+**Note:** Version bump only for package aws-amplify
+
+## [6.3.6](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.3.5...aws-amplify@6.3.6) (2024-06-07)
+
+**Note:** Version bump only for package aws-amplify
+
+## [6.3.5](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.3.4...aws-amplify@6.3.5) (2024-06-04)
+
+**Note:** Version bump only for package aws-amplify
+
+## [6.3.4](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.3.3...aws-amplify@6.3.4) (2024-05-23)
+
+**Note:** Version bump only for package aws-amplify
+
+## [6.3.3](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.3.2...aws-amplify@6.3.3) (2024-05-23)
+
+**Note:** Version bump only for package aws-amplify
+
+## [6.3.2](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.3.1...aws-amplify@6.3.2) (2024-05-16)
+
+### Bug Fixes
+
+- **ssr-adapter:** refreshToken may return the same tokens across requests ([#13387](https://github.com/aws-amplify/amplify-js/issues/13387)) ([2e5e2f1](https://github.com/aws-amplify/amplify-js/commit/2e5e2f1ab49edfd4c5f4abbf2391633da29bd476))
+
+## [6.3.1](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.3.0...aws-amplify@6.3.1) (2024-05-13)
+
+### Bug Fixes
+
+- Prevent overwriting with fallbacks when updating endpoint ([#13330](https://github.com/aws-amplify/amplify-js/issues/13330)) ([d7b837e](https://github.com/aws-amplify/amplify-js/commit/d7b837edba0dff209fb4a596fcb4531ce0a66e21))
+
+# [6.3.0](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.2.0...aws-amplify@6.3.0) (2024-05-07)
+
+### Bug Fixes
+
+- **core:** Always set login methods when parsing Gen2 config files ([#13315](https://github.com/aws-amplify/amplify-js/issues/13315)) ([f65cae2](https://github.com/aws-amplify/amplify-js/commit/f65cae2c0e288bec0d43fd1826dd224b4aa30a69))
+
+### Features
+
+- **auth:** add a default deviceName when remembering device ([#13022](https://github.com/aws-amplify/amplify-js/issues/13022)) ([5f34186](https://github.com/aws-amplify/amplify-js/commit/5f3418678a06ac43ed8bf700649703c1cf280eeb))
+
+# [6.2.0](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.1.4...aws-amplify@6.2.0) (2024-04-29)
+
+### Bug Fixes
+
+- Fix SSR & AmplifyOutput types when using Gen2 configuration files ([#13247](https://github.com/aws-amplify/amplify-js/issues/13247)) ([f797dc5](https://github.com/aws-amplify/amplify-js/commit/f797dc539f57a55a325b227d8205813b122d7789))
+
+### Features
+
+- add gen2 path parameter to getProperties and getUrl ([#13144](https://github.com/aws-amplify/amplify-js/issues/13144)) ([6456588](https://github.com/aws-amplify/amplify-js/commit/6456588bae501f92233ace4a6698d14db1f3557a))
+- **storage:** add path support to copy API ([#13104](https://github.com/aws-amplify/amplify-js/issues/13104)) ([3e6528d](https://github.com/aws-amplify/amplify-js/commit/3e6528d5fc40d2d985d38d97e2a0e8120a80728e))
+- **storage:** list API to accept both prefix and path ([#13100](https://github.com/aws-amplify/amplify-js/issues/13100)) ([872a817](https://github.com/aws-amplify/amplify-js/commit/872a8171d4b30a8b751e08bd64170d074beb9739))
+- **storage:** uploadData path parameter support ([#13099](https://github.com/aws-amplify/amplify-js/issues/13099)) ([68a88bb](https://github.com/aws-amplify/amplify-js/commit/68a88bb4be020e60e08bf7325edd8a55a03cd177))
+
+## [6.1.4](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.0.30...aws-amplify@6.1.4) (2024-04-26)
+
+### Bug Fixes
+
+- bump package versions ([#13254](https://github.com/aws-amplify/amplify-js/issues/13254)) ([aa490b9](https://github.com/aws-amplify/amplify-js/commit/aa490b9bcbd2a442d9726937cfa59ef8b7859306))
+- **data:** tests for error response fix ([#13279](https://github.com/aws-amplify/amplify-js/issues/13279)) ([1aef1ee](https://github.com/aws-amplify/amplify-js/commit/1aef1ee0e65d1489e4d86d19a6d017f852f3bafd))
+
+## [6.0.30](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.0.29...aws-amplify@6.0.30) (2024-04-24)
+
+**Note:** Version bump only for package aws-amplify
+
+## [6.0.29](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.0.28...aws-amplify@6.0.29) (2024-04-22)
+
+### Bug Fixes
+
+- **api-graphql:** incorrect list sk arg type ([#13249](https://github.com/aws-amplify/amplify-js/issues/13249)) ([f37faeb](https://github.com/aws-amplify/amplify-js/commit/f37faebacddeed66ce5bc1d7f78b8d1d46aecb17))
+
+## [6.0.28](https://github.com/aws-amplify/amplify-js/compare/aws-amplify@6.0.27...aws-amplify@6.0.28) (2024-04-09)
+
+**Note:** Version bump only for package aws-amplify
+
+## 6.0.27 (2024-04-02)
+
+**Note:** Version bump only for package aws-amplify
+
+## 6.0.26 (2024-04-01)
+
+**Note:** Version bump only for package aws-amplify
+
+## 6.0.25 (2024-03-30)
+
+**Note:** Version bump only for package aws-amplify
+
+## 6.0.24 (2024-03-29)
+
+**Note:** Version bump only for package aws-amplify
+
+## 6.0.23 (2024-03-25)
+
+**Note:** Version bump only for package aws-amplify
+
+## 6.0.22 (2024-03-25)
+
+**Note:** Version bump only for package aws-amplify
+
 ## 6.0.21 (2024-03-19)
 
 **Note:** Version bump only for package aws-amplify

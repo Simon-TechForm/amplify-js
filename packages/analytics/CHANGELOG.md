@@ -3,6 +3,68 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [7.0.36](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/analytics@7.0.35...@aws-amplify/analytics@7.0.36) (2024-06-24)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## [7.0.35](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/analytics@7.0.34...@aws-amplify/analytics@7.0.35) (2024-06-07)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## [7.0.34](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/analytics@7.0.33...@aws-amplify/analytics@7.0.34) (2024-06-04)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## [7.0.33](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/analytics@7.0.32...@aws-amplify/analytics@7.0.33) (2024-05-23)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## [7.0.32](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/analytics@7.0.31...@aws-amplify/analytics@7.0.32) (2024-05-23)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## [7.0.31](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/analytics@7.0.30...@aws-amplify/analytics@7.0.31) (2024-05-13)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## [7.0.30](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/analytics@7.0.29...@aws-amplify/analytics@7.0.30) (2024-05-07)
+
+### Bug Fixes
+
+- Await network call on identifyUser APIs ([c280817](https://github.com/aws-amplify/amplify-js/commit/c280817e03a5e6ff95b32667d799eac717d4cbb4))
+
+## [7.0.29](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/analytics@7.0.28...@aws-amplify/analytics@7.0.29) (2024-04-29)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## [7.0.28](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/analytics@7.0.27...@aws-amplify/analytics@7.0.28) (2024-04-22)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## 7.0.27 (2024-04-02)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## 7.0.26 (2024-04-01)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## 7.0.25 (2024-03-30)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## 7.0.24 (2024-03-29)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## 7.0.23 (2024-03-25)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
+## 7.0.22 (2024-03-25)
+
+**Note:** Version bump only for package @aws-amplify/analytics
+
 ## 7.0.21 (2024-03-19)
 
 **Note:** Version bump only for package @aws-amplify/analytics

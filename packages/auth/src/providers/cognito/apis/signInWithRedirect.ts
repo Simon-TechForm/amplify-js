@@ -6,6 +6,7 @@ import {
 	AuthAction,
 	assertOAuthConfig,
 	assertTokenProviderConfig,
+	isBrowser,
 	urlSafeEncode,
 } from '@aws-amplify/core/internals/utils';
 
@@ -23,6 +24,7 @@ import {
 	oAuthStore,
 } from '../utils/oauth';
 import { createOAuthError } from '../utils/oauth/createOAuthError';
+import { listenForOAuthFlowCancellation } from '../utils/oauth/cancelOAuthFlow';
 
 /**
  * Signs in a user with OAuth. Redirects the application to an Identity Provider.
@@ -87,7 +89,7 @@ const oauthSignIn = async ({
 	const { value, method, toCodeChallenge } = generateCodeVerifier(128);
 	const redirectUri = getRedirectUrl(oauthConfig.redirectSignIn);
 
-	oAuthStore.storeOAuthInFlight(true);
+	if (isBrowser()) oAuthStore.storeOAuthInFlight(true);
 	oAuthStore.storeOAuthState(state);
 	oAuthStore.storePKCE(value);
 
@@ -108,6 +110,11 @@ const oauthSignIn = async ({
 
 	// TODO(v6): use URL object instead
 	const oAuthUrl = `https://${domain}/oauth2/authorize?${queryString}`;
+
+	// this will only take effect in the following scenarios:
+	// 1. the user cancels the OAuth flow on web via back button, and
+	// 2. when bfcache is enabled
+	listenForOAuthFlowCancellation(oAuthStore);
 
 	// the following is effective only in react-native as openAuthSession resolves only in react-native
 	const { type, error, url } =

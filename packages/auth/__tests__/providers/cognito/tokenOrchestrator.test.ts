@@ -1,9 +1,14 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { TokenOrchestrator } from '../../../src/providers/cognito';
 import { Hub, ResourcesConfig } from '@aws-amplify/core';
 import { AMPLIFY_SYMBOL } from '@aws-amplify/core/internals/utils';
+
+import { TokenOrchestrator } from '../../../src/providers/cognito/tokenProvider';
+import { addInflightPromise } from '../../../src/providers/cognito/utils/oauth/inflightPromise';
+import { oAuthStore } from '../../../src/providers/cognito/utils/oauth';
+
+jest.mock('../../../src/providers/cognito/utils/oauth/oAuthStore');
 jest.mock('@aws-amplify/core', () => ({
 	...jest.requireActual('@aws-amplify/core'),
 	Hub: {
@@ -32,6 +37,10 @@ const validAuthConfig: ResourcesConfig = {
 		},
 	},
 };
+
+jest.mock('../../../src/providers/cognito/utils/oauth/inflightPromise', () => ({
+	addInflightPromise: jest.fn(),
+}));
 
 const currentDate = new Date();
 
@@ -89,10 +98,15 @@ const validAuthTokens = {
 	metadata: undefined,
 };
 
+const mockAddInflightPromise = addInflightPromise as jest.Mock;
+
 describe('TokenOrchestrator', () => {
 	const tokenOrchestrator = new TokenOrchestrator();
 	describe('Happy Path Cases:', () => {
 		beforeAll(() => {
+			mockAddInflightPromise.mockImplementation(resolver => {
+				resolver();
+			});
 			tokenOrchestrator.setAuthConfig(validAuthConfig.Auth!);
 			tokenOrchestrator.setAuthTokenStore(mockAuthTokenStore);
 			tokenOrchestrator.setTokenRefresher(mockTokenRefresher);
@@ -123,6 +137,16 @@ describe('TokenOrchestrator', () => {
 				'Auth',
 				AMPLIFY_SYMBOL,
 			);
+		});
+
+		it('Should call addInflightPromise when OAuth is inflight', async () => {
+			mockAuthTokenStore.loadTokens.mockResolvedValue(validAuthTokens);
+			(oAuthStore.loadOAuthInFlight as jest.Mock).mockResolvedValue(true);
+
+			const tokens = await tokenOrchestrator.getTokens();
+
+			expect(addInflightPromise).toHaveBeenCalledWith(expect.any(Function));
+			expect(tokens?.accessToken).toEqual(validAuthTokens.accessToken);
 		});
 	});
 });

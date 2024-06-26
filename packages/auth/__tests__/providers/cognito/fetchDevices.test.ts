@@ -3,10 +3,12 @@
 
 import { Amplify, fetchAuthSession } from '@aws-amplify/core';
 import { decodeJWT } from '@aws-amplify/core/internals/utils';
+
 import { AuthError } from '../../../src/errors/AuthError';
 import { fetchDevices } from '../../../src/providers/cognito';
 import { listDevices } from '../../../src/providers/cognito/utils/clients/CognitoIdentityProvider';
 import { ListDevicesException } from '../../../src/providers/cognito/types/errors';
+
 import { getMockError, mockAccessToken } from './testUtils/data';
 import { setUpGetConfig } from './testUtils/setUpGetConfig';
 
@@ -26,7 +28,10 @@ describe('fetchDevices', () => {
 	const dateEpoch = 1.696296885807e9;
 	const date = new Date(dateEpoch * 1000);
 	const clientResponseDevice = {
-		DeviceAttributes: [{ Name: 'attributeName', Value: 'attributeValue' }],
+		DeviceAttributes: [
+			{ Name: 'attributeName', Value: 'attributeValue' },
+			{ Name: 'device_name', Value: 'deviceNameValue' },
+		],
 		DeviceCreateDate: dateEpoch,
 		DeviceKey: 'DeviceKey',
 		DeviceLastAuthenticatedDate: dateEpoch,
@@ -34,9 +39,11 @@ describe('fetchDevices', () => {
 	};
 	const apiOutputDevice = {
 		id: 'DeviceKey',
-		name: undefined,
+		name: 'deviceNameValue',
 		attributes: {
 			attributeName: 'attributeValue',
+			// eslint-disable-next-line camelcase
+			device_name: 'deviceNameValue',
 		},
 		createDate: date,
 		lastModifiedDate: date,

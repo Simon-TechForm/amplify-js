@@ -18,7 +18,7 @@ export interface LibraryAPIOptions {
 	};
 }
 
-interface APIGraphQLConfig {
+export interface APIGraphQLConfig {
 	/**
 	 * Required GraphQL endpoint, must be a valid URL string.
 	 */
@@ -47,7 +47,7 @@ interface APIGraphQLConfig {
 	modelIntrospection?: ModelIntrospectionSchema;
 }
 
-interface APIRestConfig {
+export interface APIRestConfig {
 	/**
 	 * Required REST endpoint, must be a valid URL string.
 	 */
@@ -81,7 +81,9 @@ export type GraphQLAuthMode =
 	| 'apiKey'
 	| 'oidc'
 	| 'userPool'
+	// @deprecated; use 'identityPool'
 	| 'iam'
+	| 'identityPool'
 	| 'lambda'
 	| 'none';
 
@@ -108,6 +110,7 @@ export interface ModelIntrospectionSchema {
 	enums: SchemaEnums;
 	queries?: CustomOperations;
 	mutations?: CustomOperations;
+	subscriptions?: CustomOperations;
 }
 
 /**
@@ -154,7 +157,7 @@ export interface CustomOperation {
 	type: FieldType;
 	isArray: boolean;
 	isRequired: boolean;
-	arguments: CustomOperationArguments;
+	arguments?: CustomOperationArguments;
 }
 
 export type CustomOperationArguments = Record<string, CustomOperationArgument>;

@@ -1,6 +1,6 @@
 {
 	"name": "@aws-amplify/rtn-web-browser",
-	"version": "1.0.22",
+	"version": "1.0.30",
 	"description": "React Native module for aws-amplify web browser",
 	"main": "./dist/cjs/index.js",
 	"module": "./dist/esm/index.mjs",
@@ -11,15 +11,16 @@
 		"access": "public"
 	},
 	"scripts": {
-		"test": "tslint 'src/**/*.ts'",
+		"test": "echo 'no-op'",
 		"test:android": "./android/gradlew test -p ./android",
 		"build-with-test": "npm run clean && npm test && tsc",
-		"build:esm-cjs": "rollup -c rollup.config.mjs",
+		"build:esm-cjs": "rollup --forceExit -c rollup.config.mjs",
 		"build:watch": "npm run build:esm-cjs -- --watch",
 		"build": "npm run clean && npm run build:esm-cjs",
 		"clean": "rimraf dist lib lib-esm",
 		"format": "echo \"Not implemented\"",
-		"lint": "tslint 'src/**/*.ts' && npm run ts-coverage",
+		"lint": "eslint '**/*.{ts,tsx}' && npm run ts-coverage",
+		"lint:fix": "eslint '**/*.{ts,tsx}' --fix",
 		"ts-coverage": "typescript-coverage-report -p ./tsconfig.build.json -t 88.21"
 	},
 	"devDependencies": {

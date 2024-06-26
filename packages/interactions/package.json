@@ -1,6 +1,6 @@
 {
 	"name": "@aws-amplify/interactions",
-	"version": "6.0.21",
+	"version": "6.0.35",
 	"description": "Interactions category of aws-amplify",
 	"main": "./dist/cjs/index.js",
 	"module": "./dist/esm/index.mjs",
@@ -15,13 +15,14 @@
 		"test:size": "size-limit",
 		"build-with-test": "npm run clean && npm run build",
 		"build:umd": "webpack && webpack --config ./webpack.config.dev.js",
-		"build:esm-cjs": "rollup -c rollup.config.mjs",
+		"build:esm-cjs": "rollup --forceExit -c rollup.config.mjs",
 		"build:watch": "npm run build:esm-cjs -- --watch",
 		"build": "npm run clean && npm run build:esm-cjs && npm run build:umd",
 		"clean": "npm run clean:size && rimraf dist lib lib-esm",
 		"clean:size": "rimraf dual-publish-tmp tmp*",
 		"format": "echo \"Not implemented\"",
-		"lint": "tslint 'src/**/*.ts' && npm run ts-coverage",
+		"lint": "eslint '**/*.{ts,tsx}' && npm run ts-coverage",
+		"lint:fix": "eslint '**/*.{ts,tsx}' --fix",
 		"ts-coverage": "typescript-coverage-report -p ./tsconfig.build.json -t 88.6"
 	},
 	"typesVersions": {
@@ -80,7 +81,7 @@
 		"uuid": "^9.0.0"
 	},
 	"devDependencies": {
-		"@aws-amplify/core": "6.0.21",
+		"@aws-amplify/core": "6.3.3",
 		"typescript": "^5.0.2"
 	},
 	"size-limit": [
@@ -88,19 +89,19 @@
 			"name": "Interactions (default to Lex v2)",
 			"path": "./dist/esm/index.mjs",
 			"import": "{ Interactions }",
-			"limit": "52.00 kB"
+			"limit": "52.52 kB"
 		},
 		{
 			"name": "Interactions (Lex v2)",
 			"path": "./dist/esm/lex-v2/index.mjs",
 			"import": "{ Interactions }",
-			"limit": "52.00 kB"
+			"limit": "52.52 kB"
 		},
 		{
 			"name": "Interactions (Lex v1)",
 			"path": "./dist/esm/lex-v1/index.mjs",
 			"import": "{ Interactions }",
-			"limit": "47.00 kB"
+			"limit": "47.33 kB"
 		}
 	]
 }

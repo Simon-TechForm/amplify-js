@@ -1,5 +1,5 @@
 import { parseAWSExports } from '../src/parseAWSExports';
-import { OAuthScope } from '../src/singleton/Auth/types';
+import { OAuthProvider, OAuthScope } from '../src/singleton/Auth/types';
 import { ResourcesConfig } from '../src/singleton/types';
 
 // TODO: Add API category tests
@@ -27,9 +27,13 @@ describe('parseAWSExports', () => {
 			items: ['geoJSSearchExample'],
 			default: 'geoJSSearchExample',
 		},
+		geofenceCollections: {
+			items: ['geofenceCollection-dev'],
+			default: 'geofenceCollection-dev',
+		},
 		region,
 	};
-	const amazonLocationServiceV4 = {
+	const expectedAmazonLocationServiceV4 = {
 		maps: {
 			items: {
 				geoJsExampleMap1: {
@@ -41,13 +45,13 @@ describe('parseAWSExports', () => {
 			},
 			default: 'geoJsExampleMap1',
 		},
-		search_indices: {
-			items: ['geoJSSearchExample'],
-			default: 'geoJSSearchExample',
-		},
 		searchIndices: {
 			items: ['geoJSSearchExample'],
 			default: 'geoJSSearchExample',
+		},
+		geofenceCollections: {
+			items: ['geofenceCollection-dev'],
+			default: 'geofenceCollection-dev',
 		},
 		region,
 	};
@@ -87,7 +91,13 @@ describe('parseAWSExports', () => {
 						email: false,
 						oauth: {
 							domain: oAuthDomain,
-							providers: ['Google', 'Apple', 'Facebook', 'Amazon'],
+							providers: [
+								'Google',
+								'Apple',
+								'Facebook',
+								'Amazon',
+								'Auth0',
+							] as OAuthProvider[],
 							redirectSignIn: [oAuthSigninUrl],
 							redirectSignOut: [oAuthSignoutUrl],
 							responseType: oAuthResponseType,
@@ -114,7 +124,7 @@ describe('parseAWSExports', () => {
 				},
 			},
 			Geo: {
-				LocationService: amazonLocationServiceV4,
+				LocationService: expectedAmazonLocationServiceV4,
 			},
 			Storage: {
 				S3: {
@@ -168,7 +178,13 @@ describe('parseAWSExports', () => {
 					responseType: oAuthResponseType,
 				},
 				aws_cognito_verification_mechanisms: ['EMAIL'],
-				aws_cognito_social_providers: ['GOOGLE', 'APPLE', 'FACEBOOK', 'AMAZON'],
+				aws_cognito_social_providers: [
+					'GOOGLE',
+					'APPLE',
+					'FACEBOOK',
+					'AMAZON',
+					'Auth0',
+				],
 				aws_mandatory_sign_in: 'enable',
 				aws_mobile_analytics_app_id: appId,
 				aws_mobile_analytics_app_region: region,
@@ -243,7 +259,7 @@ describe('parseAWSExports', () => {
 					signUpVerificationMethod: undefined,
 					userAttributes: {},
 					userPoolClientId: undefined,
-					userPoolId: userPoolId,
+					userPoolId,
 				},
 			},
 		});

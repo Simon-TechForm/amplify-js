@@ -4,11 +4,11 @@
 import {
 	DefaultTokenStore,
 	TokenOrchestrator,
-	refreshAuthTokens,
+	refreshAuthTokensWithoutDedupe,
 } from '@aws-amplify/auth/cognito';
-
 import { AuthConfig, KeyValueStorageInterface } from '@aws-amplify/core';
-import { createUserPoolsTokenProvider } from '../../../../src/adapterCore';
+
+import { createUserPoolsTokenProvider } from '../../../../src/adapter-core';
 
 jest.mock('@aws-amplify/auth/cognito');
 
@@ -27,7 +27,7 @@ const mockAuthConfig: AuthConfig = {
 };
 const MockDefaultTokenStore = DefaultTokenStore as jest.Mock;
 const MockTokenOrchestrator = TokenOrchestrator as jest.Mock;
-const mockRefreshAuthTokens = refreshAuthTokens as jest.Mock;
+const mockRefreshAuthTokens = refreshAuthTokensWithoutDedupe as jest.Mock;
 
 describe('createUserPoolsTokenProvider', () => {
 	beforeEach(() => {

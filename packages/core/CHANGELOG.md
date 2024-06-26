@@ -3,6 +3,87 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [6.3.3](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/core@6.3.2...@aws-amplify/core@6.3.3) (2024-06-24)
+
+**Note:** Version bump only for package @aws-amplify/core
+
+## [6.3.2](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/core@6.3.1...@aws-amplify/core@6.3.2) (2024-06-07)
+
+**Note:** Version bump only for package @aws-amplify/core
+
+## [6.3.1](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/core@6.3.0...@aws-amplify/core@6.3.1) (2024-05-23)
+
+**Note:** Version bump only for package @aws-amplify/core
+
+# [6.3.0](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/core@6.2.1...@aws-amplify/core@6.3.0) (2024-05-23)
+
+### Features
+
+- **core:** validate if access and id tokens are valid cognito tokens ([#13385](https://github.com/aws-amplify/amplify-js/issues/13385)) ([0b72b32](https://github.com/aws-amplify/amplify-js/commit/0b72b32348dc63bbc11596a062338ee9ddfa9177))
+
+### Reverts
+
+- Revert "feat(core): validate if access and id tokens are valid cognito tokens (#13385)" (#13410) ([82d53fa](https://github.com/aws-amplify/amplify-js/commit/82d53fab4e47e988b26811cb8b6fe09abbdbda4b)), closes [#13385](https://github.com/aws-amplify/amplify-js/issues/13385) [#13410](https://github.com/aws-amplify/amplify-js/issues/13410)
+
+## [6.2.1](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/core@6.2.0...@aws-amplify/core@6.2.1) (2024-05-13)
+
+### Bug Fixes
+
+- Prevent overwriting with fallbacks when updating endpoint ([#13330](https://github.com/aws-amplify/amplify-js/issues/13330)) ([d7b837e](https://github.com/aws-amplify/amplify-js/commit/d7b837edba0dff209fb4a596fcb4531ce0a66e21))
+- Wait for endpoint creation to identify user ([#13353](https://github.com/aws-amplify/amplify-js/issues/13353)) ([f17cdf0](https://github.com/aws-amplify/amplify-js/commit/f17cdf0077387ee275bea245632f1a9b88089e1e))
+
+# [6.2.0](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/core@6.1.0...@aws-amplify/core@6.2.0) (2024-05-07)
+
+### Bug Fixes
+
+- **core:** Always set login methods when parsing Gen2 config files ([#13315](https://github.com/aws-amplify/amplify-js/issues/13315)) ([f65cae2](https://github.com/aws-amplify/amplify-js/commit/f65cae2c0e288bec0d43fd1826dd224b4aa30a69))
+- Prevent creating multiple endpoint ids ([a75ae7b](https://github.com/aws-amplify/amplify-js/commit/a75ae7b2d648ea45ad1fa9332ee95a00ba0d1d3b))
+
+### Features
+
+- **auth:** add a default deviceName when remembering device ([#13022](https://github.com/aws-amplify/amplify-js/issues/13022)) ([5f34186](https://github.com/aws-amplify/amplify-js/commit/5f3418678a06ac43ed8bf700649703c1cf280eeb))
+
+# [6.1.0](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/core@6.0.28...@aws-amplify/core@6.1.0) (2024-04-29)
+
+### Bug Fixes
+
+- Fix SSR & AmplifyOutput types when using Gen2 configuration files ([#13247](https://github.com/aws-amplify/amplify-js/issues/13247)) ([f797dc5](https://github.com/aws-amplify/amplify-js/commit/f797dc539f57a55a325b227d8205813b122d7789))
+- **geo:** update amplify config geo schema ([#13290](https://github.com/aws-amplify/amplify-js/issues/13290)) ([3cca682](https://github.com/aws-amplify/amplify-js/commit/3cca6822ad4b76ab8966654923363635d92587f0))
+
+### Features
+
+- **api-graphql:** alias authMode identityPool -> iam ([#13299](https://github.com/aws-amplify/amplify-js/issues/13299)) ([a5d176b](https://github.com/aws-amplify/amplify-js/commit/a5d176b3c9ec1cecd265740e8b4579327ef98e1f))
+
+## [6.0.28](https://github.com/aws-amplify/amplify-js/compare/@aws-amplify/core@6.0.27...@aws-amplify/core@6.0.28) (2024-04-22)
+
+### Bug Fixes
+
+- **message overrides:** extract message content with Platform-Specific Overrides ([#12917](https://github.com/aws-amplify/amplify-js/issues/12917)) ([cb91437](https://github.com/aws-amplify/amplify-js/commit/cb914374263262c84c6337dddca1f17fb7dd204a))
+
+## 6.0.27 (2024-04-02)
+
+**Note:** Version bump only for package @aws-amplify/core
+
+## 6.0.26 (2024-04-01)
+
+**Note:** Version bump only for package @aws-amplify/core
+
+## 6.0.25 (2024-03-30)
+
+**Note:** Version bump only for package @aws-amplify/core
+
+## 6.0.24 (2024-03-29)
+
+**Note:** Version bump only for package @aws-amplify/core
+
+## 6.0.23 (2024-03-25)
+
+**Note:** Version bump only for package @aws-amplify/core
+
+## 6.0.22 (2024-03-25)
+
+**Note:** Version bump only for package @aws-amplify/core
+
 ## 6.0.21 (2024-03-19)
 
 **Note:** Version bump only for package @aws-amplify/core

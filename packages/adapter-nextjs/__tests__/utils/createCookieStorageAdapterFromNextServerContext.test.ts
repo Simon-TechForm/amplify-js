@@ -1,17 +1,20 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
+import { IncomingMessage, ServerResponse } from 'http';
+import { Socket } from 'net';
+
 import { enableFetchMocks } from 'jest-fetch-mock';
+import { NextRequest, NextResponse } from 'next/server.js';
+import { cookies } from 'next/headers.js';
+
+import {
+	DATE_IN_THE_PAST,
+	createCookieStorageAdapterFromNextServerContext,
+} from '../../src/utils/createCookieStorageAdapterFromNextServerContext';
 
 // Make global Request available during test
 enableFetchMocks();
-
-import { NextRequest, NextResponse } from 'next/server.js';
-import { cookies } from 'next/headers.js';
-import { createCookieStorageAdapterFromNextServerContext } from '../../src/utils/createCookieStorageAdapterFromNextServerContext';
-import { DATE_IN_THE_PAST } from '../../src/utils/createCookieStorageAdapterFromNextServerContext';
-import { IncomingMessage, ServerResponse } from 'http';
-import { Socket } from 'net';
 
 jest.mock('next/headers', () => ({
 	cookies: jest.fn(),
@@ -290,7 +293,7 @@ describe('createCookieStorageAdapterFromNextServerContext', () => {
 
 			const request = new IncomingMessage(new Socket());
 			const response = new ServerResponse(request);
-			const setHeaderSpy = jest.spyOn(response, 'setHeader');
+			const appendHeaderSpy = jest.spyOn(response, 'appendHeader');
 
 			Object.defineProperty(request, 'cookies', {
 				get() {
@@ -311,21 +314,30 @@ describe('createCookieStorageAdapterFromNextServerContext', () => {
 			]);
 
 			result.set('key3', 'value3');
-			expect(setHeaderSpy).toHaveBeenCalledWith('Set-Cookie', 'key3=value3;');
+			expect(appendHeaderSpy).toHaveBeenCalledWith(
+				'Set-Cookie',
+				'key3=value3;',
+			);
 
 			result.set('key4', 'value4', {
 				httpOnly: true,
 			});
-			expect(setHeaderSpy).toHaveBeenCalledWith(
+			expect(appendHeaderSpy).toHaveBeenCalledWith(
 				'Set-Cookie',
 				'key4=value4;HttpOnly',
 			);
 
 			result.delete('key3');
-			expect(setHeaderSpy).toHaveBeenCalledWith(
+			expect(appendHeaderSpy).toHaveBeenCalledWith(
 				'Set-Cookie',
 				`key3=;Expires=${DATE_IN_THE_PAST.toUTCString()}`,
 			);
+
+			expect(response.getHeader('Set-Cookie')).toEqual([
+				'key3=value3;',
+				'key4=value4;HttpOnly',
+				'key3=;Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+			]);
 		});
 
 		it('operates with the underlying cookie store with encoded cookie names', () => {
@@ -343,7 +355,7 @@ describe('createCookieStorageAdapterFromNextServerContext', () => {
 
 			const request = new IncomingMessage(new Socket());
 			const response = new ServerResponse(request);
-			const setHeaderSpy = jest.spyOn(response, 'setHeader');
+			const appendHeaderSpy = jest.spyOn(response, 'appendHeader');
 
 			Object.defineProperty(request, 'cookies', {
 				get() {
@@ -368,7 +380,10 @@ describe('createCookieStorageAdapterFromNextServerContext', () => {
 			]);
 
 			result.set('key3', 'value3');
-			expect(setHeaderSpy).toHaveBeenCalledWith('Set-Cookie', 'key3=value3;');
+			expect(appendHeaderSpy).toHaveBeenCalledWith(
+				'Set-Cookie',
+				'key3=value3;',
+			);
 
 			result.set('key4', 'value4', {
 				httpOnly: true,
@@ -378,16 +393,23 @@ describe('createCookieStorageAdapterFromNextServerContext', () => {
 				'test@email.com.somethingElse',
 			);
 			result.set(encodeURIComponent('test@email.com.somethingElse'), 'value5');
-			expect(setHeaderSpy).toHaveBeenCalledWith(
+			expect(appendHeaderSpy).toHaveBeenCalledWith(
 				'Set-Cookie',
 				`${encodeURIComponent(encodedCookieName)}=value5;`,
 			);
 
 			result.delete('key3');
-			expect(setHeaderSpy).toHaveBeenCalledWith(
+			expect(appendHeaderSpy).toHaveBeenCalledWith(
 				'Set-Cookie',
 				`key3=;Expires=${DATE_IN_THE_PAST.toUTCString()}`,
 			);
+
+			expect(response.getHeader('Set-Cookie')).toEqual([
+				'key3=value3;',
+				'key4=value4;HttpOnly',
+				'test%2540email.com.somethingElse=value5;',
+				'key3=;Expires=Thu, 01 Jan 1970 00:00:00 GMT',
+			]);
 		});
 	});
 

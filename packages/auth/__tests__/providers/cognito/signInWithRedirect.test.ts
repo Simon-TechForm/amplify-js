@@ -3,28 +3,25 @@
 
 import { Amplify } from '@aws-amplify/core';
 import {
+	ADD_OAUTH_LISTENER,
 	assertOAuthConfig,
 	assertTokenProviderConfig,
-	urlSafeEncode,
 	isBrowser,
-	ADD_OAUTH_LISTENER,
+	urlSafeEncode,
 } from '@aws-amplify/core/internals/utils';
+
 import { assertUserNotAuthenticated } from '../../../src/providers/cognito/utils/signInHelpers';
 import {
+	completeOAuthFlow,
 	generateCodeVerifier,
 	generateState,
-} from '../../../src/providers/cognito/utils/oauth';
-import { getAuthUserAgentValue, openAuthSession } from '../../../src/utils';
-import {
 	handleFailure,
 	oAuthStore,
-	completeOAuthFlow,
 } from '../../../src/providers/cognito/utils/oauth';
+import { getAuthUserAgentValue, openAuthSession } from '../../../src/utils';
 import { attemptCompleteOAuthFlow } from '../../../src/providers/cognito/utils/oauth/attemptCompleteOAuthFlow';
 import { createOAuthError } from '../../../src/providers/cognito/utils/oauth/createOAuthError';
-
 import { signInWithRedirect } from '../../../src/providers/cognito/apis/signInWithRedirect';
-
 import type { OAuthStore } from '../../../src/providers/cognito/utils/types';
 import { mockAuthConfigWithOAuth } from '../../mockData';
 
@@ -36,22 +33,24 @@ jest.mock('@aws-amplify/core/internals/utils', () => ({
 	isBrowser: jest.fn(() => true),
 }));
 jest.mock('@aws-amplify/core', () => {
-	const { ADD_OAUTH_LISTENER } = jest.requireActual(
+	const { ADD_OAUTH_LISTENER: ACTUAL_ADD_OAUTH_LISTENER } = jest.requireActual(
 		'@aws-amplify/core/internals/utils',
 	);
+
 	return {
 		Amplify: {
 			getConfig: jest.fn(() => mockAuthConfigWithOAuth),
-			[ADD_OAUTH_LISTENER]: jest.fn(),
+			[ACTUAL_ADD_OAUTH_LISTENER]: jest.fn(),
 		},
 		ConsoleLogger: jest.fn(),
 	};
 });
+
 jest.mock('../../../src/providers/cognito/utils/signInHelpers');
+
 jest.mock('../../../src/providers/cognito/utils/oauth', () => ({
 	...jest.requireActual('../../../src/providers/cognito/utils/oauth'),
 	completeOAuthFlow: jest.fn(),
-	handleFailure: jest.fn(),
 	generateCodeVerifier: jest.fn(),
 	generateState: jest.fn(),
 }));
@@ -70,6 +69,7 @@ jest.mock('../../../src/providers/cognito/utils/oauth/oAuthStore', () => ({
 		clearOAuthInflightData: jest.fn(),
 	} as OAuthStore,
 }));
+jest.mock('../../../src/providers/cognito/utils/oauth/handleFailure');
 jest.mock('../../../src/providers/cognito/utils/oauth/createOAuthError');
 jest.mock('../../../src/utils');
 
@@ -188,9 +188,32 @@ describe('signInWithRedirect', () => {
 				);
 			});
 		});
+
+		it('invokes handleFailure when user cancels the oauth flow', async () => {
+			const error = new Error('OAuth flow was cancelled.');
+			const mockOpenAuthSessionResult = {
+				type: undefined,
+			};
+			mockCreateOAuthError.mockReturnValueOnce(error);
+			mockOpenAuthSession.mockResolvedValueOnce(mockOpenAuthSessionResult);
+			oAuthStore.loadOAuthInFlight = jest.fn().mockResolvedValueOnce(true);
+			const currentAddEventlistener = window.addEventListener;
+			window.addEventListener = jest.fn((event: string, cb: any) => {
+				cb({ persisted: true });
+			});
+
+			await signInWithRedirect({ provider: 'Google' });
+			expect(mockCreateOAuthError).toHaveBeenCalledTimes(1);
+			expect(mockHandleFailure).toHaveBeenCalledWith(error);
+
+			window.addEventListener = currentAddEventlistener;
+		});
 	});
 
 	describe('specifications on react-native', () => {
+		beforeAll(() => {
+			mockIsBrowser.mockReturnValue(false);
+		});
 		it('invokes `completeOAuthFlow` when `openAuthSession`completes', async () => {
 			const mockOpenAuthSessionResult = {
 				type: 'success',
@@ -258,6 +281,19 @@ describe('signInWithRedirect', () => {
 				}),
 			);
 			expect(mockHandleFailure).toHaveBeenCalledWith(expectedError);
+		});
+		it('should not set the Oauth flag on non-browser environments', async () => {
+			const mockOpenAuthSessionResult = {
+				type: 'success',
+				url: 'http://redrect-in-react-native.com',
+			};
+			mockOpenAuthSession.mockResolvedValueOnce(mockOpenAuthSessionResult);
+
+			await signInWithRedirect({
+				provider: 'Google',
+			});
+
+			expect(oAuthStore.storeOAuthInFlight).toHaveBeenCalledTimes(0);
 		});
 	});
 

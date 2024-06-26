@@ -1,10 +1,9 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { Hub } from '@aws-amplify/core';
-import { assertTokenProviderConfig } from '@aws-amplify/core/internals/utils';
 import { tokenOrchestrator } from '../../../../src/providers/cognito/tokenProvider';
 import { CognitoAuthTokens } from '../../../../src/providers/cognito/tokenProvider/types';
+import { oAuthStore } from '../../../../src/providers/cognito/utils/oauth/oAuthStore';
 
 jest.mock('@aws-amplify/core/internals/utils');
 jest.mock('@aws-amplify/core', () => ({
@@ -13,8 +12,7 @@ jest.mock('@aws-amplify/core', () => ({
 		dispatch: jest.fn(),
 	},
 }));
-
-const mockAssertTokenProviderConfig = assertTokenProviderConfig as jest.Mock;
+jest.mock('../../../../src/providers/cognito/utils/oauth/oAuthStore');
 
 describe('tokenOrchestrator', () => {
 	const mockTokenRefresher = jest.fn();
@@ -29,21 +27,37 @@ describe('tokenOrchestrator', () => {
 	};
 
 	beforeAll(() => {
+		tokenOrchestrator.waitForInflightOAuth = jest.fn();
 		tokenOrchestrator.setTokenRefresher(mockTokenRefresher);
 		tokenOrchestrator.setAuthTokenStore(mockTokenStore);
+	});
+
+	beforeEach(() => {
+		(oAuthStore.loadOAuthInFlight as jest.Mock).mockResolvedValue(
+			Promise.resolve(false),
+		);
+	});
+
+	afterEach(() => {
+		(oAuthStore.loadOAuthInFlight as jest.Mock).mockClear();
 	});
 
 	describe('refreshTokens method', () => {
 		it('calls the set tokenRefresher, tokenStore and Hub while refreshing tokens', async () => {
 			const testUsername = 'username';
+			const testSignInDetails = {
+				authFlowType: 'CUSTOM_WITHOUT_SRP',
+				loginId: testUsername,
+			} as const;
 			const testInputTokens = {
 				accessToken: {
 					payload: {},
 				},
 				clockDrift: 400000,
 				username: testUsername,
+				signInDetails: testSignInDetails,
 			};
-
+			// mock tokens should not include signInDetails
 			const mockTokens: CognitoAuthTokens = {
 				accessToken: {
 					payload: {},
@@ -52,8 +66,8 @@ describe('tokenOrchestrator', () => {
 				username: testUsername,
 			};
 			mockTokenRefresher.mockResolvedValueOnce(mockTokens);
-			mockTokenStore.storeTokens.mockResolvedValue(void 0);
-			const newTokens = await tokenOrchestrator['refreshTokens']({
+			mockTokenStore.storeTokens.mockResolvedValue(undefined);
+			const newTokens = await (tokenOrchestrator as any).refreshTokens({
 				tokens: testInputTokens,
 				username: testUsername,
 			});
@@ -71,6 +85,7 @@ describe('tokenOrchestrator', () => {
 
 			// ensure the result is correct
 			expect(newTokens).toEqual(mockTokens);
+			expect(newTokens?.signInDetails).toEqual(testSignInDetails);
 		});
 	});
 });

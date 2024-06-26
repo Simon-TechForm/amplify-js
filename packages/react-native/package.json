@@ -1,6 +1,6 @@
 {
 	"name": "@aws-amplify/react-native",
-	"version": "1.0.22",
+	"version": "1.1.1",
 	"description": "React Native core module for aws-amplify",
 	"main": "./dist/cjs/index.js",
 	"module": "./dist/esm/index.mjs",
@@ -11,15 +11,16 @@
 		"access": "public"
 	},
 	"scripts": {
-		"test": "tslint 'src/**/*.ts'",
+		"test": "echo 'no-op'",
 		"test:android": "./android/gradlew test -p ./android",
 		"build-with-test": "npm run clean && npm test && tsc",
-		"build:esm-cjs": "rollup -c rollup.config.mjs",
+		"build:esm-cjs": "rollup --forceExit -c rollup.config.mjs",
 		"build:watch": "npm run build:esm-cjs -- --watch",
 		"build": "npm run clean && npm run build:esm-cjs",
 		"clean": "rimraf lib-esm lib dist",
 		"format": "echo \"Not implemented\"",
-		"lint": "tslint 'src/**/*.ts' && npm run ts-coverage",
+		"lint": "eslint '**/*.{ts,tsx}' && npm run ts-coverage",
+		"lint:fix": "eslint '**/*.{ts,tsx}' --fix",
 		"ts-coverage": "typescript-coverage-report -p ./tsconfig.build.json -t 88.21"
 	},
 	"dependencies": {
@@ -32,8 +33,8 @@
 		"react-native-get-random-values": ">=1.9.0"
 	},
 	"devDependencies": {
-		"@aws-amplify/rtn-push-notification": "1.2.22",
-		"@aws-amplify/rtn-web-browser": "1.0.22",
+		"@aws-amplify/rtn-push-notification": "1.2.29",
+		"@aws-amplify/rtn-web-browser": "1.0.30",
 		"@react-native-async-storage/async-storage": "^1.17.12",
 		"@react-native-community/netinfo": "4.7.0",
 		"@types/base-64": "1.0.0",

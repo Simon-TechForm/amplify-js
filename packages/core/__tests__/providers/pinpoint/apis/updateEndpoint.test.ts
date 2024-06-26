@@ -1,29 +1,37 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { v4 } from 'uuid';
 import { getClientInfo } from '../../../../src/utils/getClientInfo';
 import { updateEndpoint as clientUpdateEndpoint } from '../../../../src/awsClients/pinpoint';
 import { cacheEndpointId } from '../../../../src/providers/pinpoint/utils/cacheEndpointId';
+import {
+	clearCreatedEndpointId,
+	createEndpointId,
+} from '../../../../src/providers/pinpoint/utils/createEndpointId';
 import { getEndpointId } from '../../../../src/providers/pinpoint/utils/getEndpointId';
 import { updateEndpoint } from '../../../../src/providers/pinpoint/apis';
+import { amplifyUuid } from '../../../../src/utils/amplifyUuid';
 import {
 	appId,
 	category,
 	clientDemographic,
 	credentials,
 	endpointId,
+	identityId,
 	region,
+	userAttributes,
 	userId,
 	userProfile,
 	uuid,
 } from '../testUtils/data';
+
 import { getExpectedInput } from './testUtils/getExpectedInput';
 
-jest.mock('uuid');
 jest.mock('../../../../src/awsClients/pinpoint');
 jest.mock('../../../../src/providers/pinpoint/utils/cacheEndpointId');
+jest.mock('../../../../src/providers/pinpoint/utils/createEndpointId');
 jest.mock('../../../../src/providers/pinpoint/utils/getEndpointId');
+jest.mock('../../../../src/utils/amplifyUuid');
 jest.mock('../../../../src/utils/getClientInfo');
 
 describe('Pinpoint Provider API: updateEndpoint', () => {
@@ -39,14 +47,17 @@ describe('Pinpoint Provider API: updateEndpoint', () => {
 		timezone: 'user-timezone',
 	};
 	// assert mocks
+	const mockAmplifyUuid = amplifyUuid as jest.Mock;
 	const mockCacheEndpointId = cacheEndpointId as jest.Mock;
+	const mockClearCreatedEndpointId = clearCreatedEndpointId as jest.Mock;
+	const mockCreateEndpointId = createEndpointId as jest.Mock;
 	const mockClientUpdateEndpoint = clientUpdateEndpoint as jest.Mock;
 	const mockGetClientInfo = getClientInfo as jest.Mock;
 	const mockGetEndpointId = getEndpointId as jest.Mock;
-	const mockUuid = v4 as jest.Mock;
 
 	beforeAll(() => {
-		mockUuid.mockReturnValue(uuid);
+		mockAmplifyUuid.mockReturnValue(uuid);
+		mockCreateEndpointId.mockReturnValue(createdEndpointId);
 		mockGetClientInfo.mockReturnValue(clientDemographic);
 	});
 
@@ -56,7 +67,9 @@ describe('Pinpoint Provider API: updateEndpoint', () => {
 
 	afterEach(() => {
 		mockCacheEndpointId.mockClear();
-		mockClientUpdateEndpoint.mockClear();
+		mockClearCreatedEndpointId.mockClear();
+		mockCreateEndpointId.mockClear();
+		mockClientUpdateEndpoint.mockReset();
 		mockGetEndpointId.mockReset();
 	});
 
@@ -119,7 +132,8 @@ describe('Pinpoint Provider API: updateEndpoint', () => {
 		);
 	});
 
-	it('merges demographics', async () => {
+	it('merges demographics with client info on endpoint creation', async () => {
+		mockGetEndpointId.mockReturnValue(undefined);
 		const partialDemographic = { ...demographic } as any;
 		delete partialDemographic.make;
 		delete partialDemographic.model;
@@ -135,6 +149,7 @@ describe('Pinpoint Provider API: updateEndpoint', () => {
 		expect(mockClientUpdateEndpoint).toHaveBeenCalledWith(
 			{ credentials, region },
 			getExpectedInput({
+				endpointId: createdEndpointId,
 				demographic: {
 					...demographic,
 					make: clientDemographic.make,
@@ -144,9 +159,60 @@ describe('Pinpoint Provider API: updateEndpoint', () => {
 		);
 	});
 
+	it('does not merge demographics with client info on endpoint update', async () => {
+		const partialDemographic = { ...demographic } as any;
+		delete partialDemographic.make;
+		delete partialDemographic.model;
+		await updateEndpoint({
+			appId,
+			category,
+			credentials,
+			region,
+			userProfile: {
+				demographic: partialDemographic,
+			},
+		});
+		expect(mockClientUpdateEndpoint).toHaveBeenCalledWith(
+			{ credentials, region },
+			getExpectedInput({ demographic: partialDemographic }),
+		);
+	});
+
+	it('falls back to idenity id on endpoint creation', async () => {
+		mockGetEndpointId.mockReturnValue(undefined);
+		await updateEndpoint({
+			appId,
+			category,
+			credentials,
+			identityId,
+			region,
+		});
+		expect(mockClientUpdateEndpoint).toHaveBeenCalledWith(
+			{ credentials, region },
+			getExpectedInput({
+				endpointId: createdEndpointId,
+				userId: identityId,
+			}),
+		);
+	});
+
+	it('does not fall back to idenity id on endpoint update', async () => {
+		await updateEndpoint({
+			appId,
+			category,
+			credentials,
+			identityId,
+			region,
+			userAttributes,
+		});
+		expect(mockClientUpdateEndpoint).toHaveBeenCalledWith(
+			{ credentials, region },
+			getExpectedInput({ userAttributes }),
+		);
+	});
+
 	it('creates an endpoint if one is not already cached', async () => {
 		mockGetEndpointId.mockReturnValue(undefined);
-		mockUuid.mockReturnValueOnce(createdEndpointId);
 		await updateEndpoint({ appId, category, credentials, region });
 		expect(mockClientUpdateEndpoint).toHaveBeenCalledWith(
 			{ credentials, region },
@@ -157,10 +223,33 @@ describe('Pinpoint Provider API: updateEndpoint', () => {
 			category,
 			createdEndpointId,
 		);
+		expect(mockClearCreatedEndpointId).toHaveBeenCalledWith(appId, category);
+	});
+
+	it('does not create an endpoint if previously cached', async () => {
+		await updateEndpoint({ appId, category, credentials, region });
+		expect(mockCreateEndpointId).not.toHaveBeenCalled();
 	});
 
 	it('does not cache endpoint if previously cached', async () => {
 		await updateEndpoint({ appId, category, credentials, region });
 		expect(mockCacheEndpointId).not.toHaveBeenCalled();
+		expect(mockClearCreatedEndpointId).not.toHaveBeenCalled();
+	});
+
+	it('throws on update failure', async () => {
+		mockClientUpdateEndpoint.mockRejectedValue(new Error());
+		await expect(
+			updateEndpoint({ appId, category, credentials, region }),
+		).rejects.toThrow();
+	});
+
+	it('clears a created endpoint on update failure', async () => {
+		mockGetEndpointId.mockReturnValue(undefined);
+		mockClientUpdateEndpoint.mockRejectedValue(new Error());
+		await expect(
+			updateEndpoint({ appId, category, credentials, region }),
+		).rejects.toThrow();
+		expect(mockClearCreatedEndpointId).toHaveBeenCalledWith(appId, category);
 	});
 });

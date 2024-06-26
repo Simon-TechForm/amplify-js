@@ -1,7 +1,11 @@
 // Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
 // SPDX-License-Identifier: Apache-2.0
 
-import { updateEndpoint } from '@aws-amplify/core/internals/providers/pinpoint';
+import {
+	getEndpointId,
+	updateEndpoint,
+} from '@aws-amplify/core/internals/providers/pinpoint';
+
 import { assertIsInitialized } from '../../../../../src/pushNotifications/errors/errorHelpers';
 import { identifyUser } from '../../../../../src/pushNotifications/providers/pinpoint/apis/identifyUser.native';
 import { IdentifyUserInput } from '../../../../../src/pushNotifications/providers/pinpoint/types';
@@ -11,6 +15,7 @@ import {
 } from '../../../../../src/pushNotifications/utils';
 import {
 	getChannelType,
+	getInflightDeviceRegistration,
 	resolveConfig,
 } from '../../../../../src/pushNotifications/providers/pinpoint/utils';
 import {
@@ -32,11 +37,14 @@ describe('identifyUser (native)', () => {
 	// assert mocks
 	const mockAssertIsInitialized = assertIsInitialized as jest.Mock;
 	const mockGetChannelType = getChannelType as jest.Mock;
-	const mockUpdateEndpoint = updateEndpoint as jest.Mock;
+	const mockGetEndpointId = getEndpointId as jest.Mock;
+	const mockGetInflightDeviceRegistration =
+		getInflightDeviceRegistration as jest.Mock;
 	const mockGetPushNotificationUserAgentString =
 		getPushNotificationUserAgentString as jest.Mock;
 	const mockResolveConfig = resolveConfig as jest.Mock;
 	const mockResolveCredentials = resolveCredentials as jest.Mock;
+	const mockUpdateEndpoint = updateEndpoint as jest.Mock;
 
 	beforeAll(() => {
 		mockGetChannelType.mockReturnValue(channelType);
@@ -46,8 +54,10 @@ describe('identifyUser (native)', () => {
 	});
 
 	afterEach(() => {
-		mockUpdateEndpoint.mockClear();
 		mockAssertIsInitialized.mockReset();
+		mockGetEndpointId.mockReset();
+		mockUpdateEndpoint.mockReset();
+		mockGetInflightDeviceRegistration.mockClear();
 	});
 
 	it('must be initialized', async () => {
@@ -101,5 +111,34 @@ describe('identifyUser (native)', () => {
 			userAgentValue,
 			userAttributes,
 		});
+	});
+
+	it('rejects if underlying promise rejects', async () => {
+		mockUpdateEndpoint.mockRejectedValue(new Error());
+		const input: IdentifyUserInput = {
+			userId: 'user-id',
+			userProfile: {},
+		};
+		await expect(identifyUser(input)).rejects.toBeDefined();
+	});
+
+	it('awaits device registration promise when endpoint is not present', async () => {
+		const input: IdentifyUserInput = {
+			userId: 'user-id',
+			userProfile: {},
+		};
+		mockGetEndpointId.mockResolvedValue(undefined);
+		await identifyUser(input);
+		expect(mockGetInflightDeviceRegistration).toHaveBeenCalled();
+	});
+
+	it('does not await device registration promise when endpoint is present', async () => {
+		const input: IdentifyUserInput = {
+			userId: 'user-id',
+			userProfile: {},
+		};
+		mockGetEndpointId.mockResolvedValue('endpoint-id');
+		await identifyUser(input);
+		expect(mockGetInflightDeviceRegistration).not.toHaveBeenCalled();
 	});
 });

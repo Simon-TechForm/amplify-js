@@ -2,13 +2,21 @@
 // SPDX-License-Identifier: Apache-2.0
 
 import { PushNotificationAction } from '@aws-amplify/core/internals/utils';
-import { updateEndpoint } from '@aws-amplify/core/internals/providers/pinpoint';
+import {
+	getEndpointId,
+	updateEndpoint,
+} from '@aws-amplify/core/internals/providers/pinpoint';
+
 import { assertIsInitialized } from '../../../errors/errorHelpers';
 import {
 	getPushNotificationUserAgentString,
 	resolveCredentials,
 } from '../../../utils';
-import { getChannelType, resolveConfig } from '../utils';
+import {
+	getChannelType,
+	getInflightDeviceRegistration,
+	resolveConfig,
+} from '../utils';
 import { IdentifyUser } from '../types';
 
 export const identifyUser: IdentifyUser = async ({
@@ -20,7 +28,11 @@ export const identifyUser: IdentifyUser = async ({
 	const { credentials, identityId } = await resolveCredentials();
 	const { appId, region } = resolveConfig();
 	const { address, optOut, userAttributes } = options ?? {};
-	updateEndpoint({
+	if (!(await getEndpointId(appId, 'PushNotification'))) {
+		// if there is no cached endpoint id, wait for successful endpoint creation before continuing
+		await getInflightDeviceRegistration();
+	}
+	await updateEndpoint({
 		address,
 		channelType: getChannelType(),
 		optOut,
