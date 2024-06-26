@@ -5,8 +5,10 @@ import { PinpointServiceOptions } from '@aws-amplify/core/internals/providers/pi
 
 /**
  * Options specific to Pinpoint identityUser.
+ * Convert interface `IdentifyUserOptions` to a type to avoid `index signature 'string' is missing`
+ * Taken from https://github.com/microsoft/TypeScript/issues/15300#issuecomment-1320421641
  */
 export type IdentifyUserOptions = Pick<
 	PinpointServiceOptions,
-	'userAttributes'
+	keyof PinpointServiceOptions
 >;

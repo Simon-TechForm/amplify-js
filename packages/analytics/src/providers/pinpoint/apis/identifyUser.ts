@@ -61,10 +61,14 @@ export const identifyUser = async ({
 	userId,
 	userProfile,
 	options,
-}: IdentifyUserInput): Promise<void> => {
+	channelType,
+}: IdentifyUserInput & {
+	// Since we won't use the push-notifications identifyUser, we need to be able to pass a channel type as well
+	channelType?: Parameters<typeof updateEndpoint>[0]['channelType'];
+}): Promise<void> => {
 	const { credentials, identityId } = await resolveCredentials();
 	const { appId, region } = resolveConfig();
-	const { userAttributes } = options ?? {};
+	const { userAttributes, address, optOut } = options ?? {};
 	await updateEndpoint({
 		appId,
 		category: 'Analytics',
@@ -75,5 +79,8 @@ export const identifyUser = async ({
 		userId,
 		userProfile,
 		userAgentValue: getAnalyticsUserAgentString(AnalyticsAction.IdentifyUser),
+		address,
+		optOut,
+		channelType,
 	});
 };
