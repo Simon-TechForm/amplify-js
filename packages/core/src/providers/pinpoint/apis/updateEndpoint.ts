@@ -5,9 +5,7 @@ import {
 	UpdateEndpointInput,
 	updateEndpoint as clientUpdateEndpoint,
 } from '../../../awsClients/pinpoint';
-import { UserProfile } from '../../../types';
 import { amplifyUuid } from '../../../utils/amplifyUuid';
-import { getClientInfo } from '../../../utils/getClientInfo';
 import { PinpointUpdateEndpointInput } from '../types';
 import { cacheEndpointId } from '../utils/cacheEndpointId';
 import {
@@ -50,20 +48,7 @@ export const updateEndpoint = async ({
 
 	// only automatically populate the endpoint with client info and identity id upon endpoint creation to
 	// avoid overwriting the endpoint with these values every time the endpoint is updated
-	const demographicsFromClientInfo: UserProfile['demographic'] = {};
 	const resolvedUserId = createdEndpointId ? userId ?? identityId : userId;
-	if (createdEndpointId) {
-		const clientInfo = getClientInfo();
-		demographicsFromClientInfo.appVersion = clientInfo.appVersion;
-		demographicsFromClientInfo.make = clientInfo.make;
-		demographicsFromClientInfo.model = clientInfo.model;
-		demographicsFromClientInfo.modelVersion = clientInfo.version;
-		demographicsFromClientInfo.platform = clientInfo.platform;
-	}
-	const mergedDemographic = {
-		...demographicsFromClientInfo,
-		...demographic,
-	};
 	const attributes = {
 		...(email && { email: [email] }),
 		...(name && { name: [name] }),
@@ -71,7 +56,6 @@ export const updateEndpoint = async ({
 		...customProperties,
 	};
 
-	const shouldAddDemographics = createdEndpointId || demographic;
 	const shouldAddAttributes = email || customProperties || name || plan;
 	const shouldAddUser = resolvedUserId || userAttributes;
 
@@ -84,16 +68,16 @@ export const updateEndpoint = async ({
 			ChannelType: channelType,
 			Address: address,
 			...(shouldAddAttributes && { Attributes: attributes }),
-			...(shouldAddDemographics && {
+			...(demographic && {
 				Demographic: {
-					AppVersion: mergedDemographic.appVersion,
-					Locale: mergedDemographic.locale,
-					Make: mergedDemographic.make,
-					Model: mergedDemographic.model,
-					ModelVersion: mergedDemographic.modelVersion,
-					Platform: mergedDemographic.platform,
-					PlatformVersion: mergedDemographic.platformVersion,
-					Timezone: mergedDemographic.timezone,
+					AppVersion: demographic.appVersion,
+					Locale: demographic.locale,
+					Make: demographic.make,
+					Model: demographic.model,
+					ModelVersion: demographic.modelVersion,
+					Platform: demographic.platform,
+					PlatformVersion: demographic.platformVersion,
+					Timezone: demographic.timezone,
 				},
 			}),
 			...(location && {
