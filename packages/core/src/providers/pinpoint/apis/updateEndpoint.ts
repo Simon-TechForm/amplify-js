@@ -48,7 +48,7 @@ export const updateEndpoint = async ({
 
 	// only automatically populate the endpoint with client info and identity id upon endpoint creation to
 	// avoid overwriting the endpoint with these values every time the endpoint is updated
-	const resolvedUserId = createdEndpointId ? userId ?? identityId : userId;
+	const resolvedUserId = createdEndpointId ? (userId ?? identityId) : userId;
 	const attributes = {
 		...(email && { email: [email] }),
 		...(name && { name: [name] }),
